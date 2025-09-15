@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "358293113929",
+    "project_id": "yieldzen-2wp48",
+    "storage_bucket": "yieldzen-2wp48.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:358293113929:android:3ed0450b47998bb5994398",
+        "android_client_info": {
+          "package_name": "com.fatokifury.focusflow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlcmBd6EQLxCTzGXhpYt2b8Exu79AfXOQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:358293113929:android:0f408f93cf326006994398",
+        "android_client_info": {
+          "package_name": "com.fatokifury.meal_flow"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlcmBd6EQLxCTzGXhpYt2b8Exu79AfXOQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

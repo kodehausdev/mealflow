@@ -1,8 +1,6 @@
 package com.fatokifury.meal_flow.ui.screens
 
-import android.os.Build
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -22,6 +20,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -31,8 +30,7 @@ import com.fatokifury.meal_flow.ui.viewmodels.RecipeListViewModel
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-
-@RequiresApi(Build.VERSION_CODES.KITKAT)
+import androidx.compose.material.icons.filled.CalendarMonth // Or another calendar icon
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeListScreen(
@@ -57,7 +55,7 @@ fun RecipeListScreen(
                     val field = uiState::class.java.getDeclaredField("errorMessage")
                     field.isAccessible = true
                     field.get(uiState) as? String
-                } catch (e: Exception) { null }
+                } catch (_: Exception) { null }
             }
             // Check if your UiState has an error property
             uiState::class.java.declaredFields.any { it.name == "error" } -> {
@@ -65,7 +63,7 @@ fun RecipeListScreen(
                     val field = uiState::class.java.getDeclaredField("error")
                     field.isAccessible = true
                     field.get(uiState) as? String
-                } catch (e: Exception) { null }
+                } catch (_: Exception) { null }
             }
             else -> null
         }
@@ -81,7 +79,7 @@ fun RecipeListScreen(
             try {
                 val clearMethod = viewModel::class.java.getMethod("clearErrorMessage")
                 clearMethod.invoke(viewModel)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 // Method doesn't exist, ignore
             }
         }
@@ -97,6 +95,12 @@ fun RecipeListScreen(
                         Icon(
                             imageVector = Icons.Filled.Link,
                             contentDescription = "Import Recipe from URL"
+                        )
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.MealCalendar.route) }) {
+                        Icon(
+                            imageVector = Icons.Filled.CalendarMonth,
+                            contentDescription = "Open Meal Calendar"
                         )
                     }
                 }
@@ -123,14 +127,14 @@ fun RecipeListScreen(
                 val field = uiState::class.java.getDeclaredField("isLoading")
                 field.isAccessible = true
                 field.get(uiState) as? Boolean ?: false
-            } catch (e: Exception) { false }
+            } catch (_: Exception) { false }
 
             // Get recipes list
             val recipes = try {
                 val field = uiState::class.java.getDeclaredField("recipes")
                 field.isAccessible = true
                 field.get(uiState) as? List<Recipe> ?: emptyList()
-            } catch (e: Exception) { emptyList<Recipe>() }
+            } catch (_: Exception) { emptyList() }
 
             when {
                 isLoading -> {
@@ -247,7 +251,7 @@ fun RecipeListScreen(
                                 navController.navigate(Screen.ImportRecipe.createRoute(encodedUrl))
                                 showUrlDialog = false
                                 urlInput = TextFieldValue("")
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 Toast.makeText(context, "Invalid URL format", Toast.LENGTH_SHORT).show()
                             }
                         } else {
@@ -290,7 +294,7 @@ fun RecipeListItem(
                 style = MaterialTheme.typography.titleMedium
             )
 
-            if (!recipe.description.isNullOrBlank()) {
+            if (recipe.description.isNotBlank()) {
                 Text(
                     text = recipe.description.take(100) +
                             if (recipe.description.length > 100) "..." else "",
@@ -300,4 +304,10 @@ fun RecipeListItem(
             }
         }
     }
+}
+
+@Preview(showBackground = true, name = "Recipe List Screen")
+@Composable
+fun RecipeListScreenPreview() {
+    RecipeListScreen(navController = NavController(LocalContext.current))
 }

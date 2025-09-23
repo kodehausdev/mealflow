@@ -1,7 +1,9 @@
 package com.fatokifury.meal_flow.navigation
+import android.os.Build
 import com.fatokifury.meal_flow.ui.viewmodels.AuthViewModel
 import com.fatokifury.meal_flow.ui.viewmodels.AuthResultState
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,6 +31,7 @@ import com.fatokifury.meal_flow.ui.screens.AddRecipeScreen // Import AddRecipeSc
 import com.fatokifury.meal_flow.ui.screens.RecipeListScreen
 import com.fatokifury.meal_flow.ui.screens.RecipeDetailScreen // Import the new screen
 import com.fatokifury.meal_flow.ui.screens.ImportRecipeScreen // Import the new ImportRecipeScreen
+import com.fatokifury.meal_flow.ui.screens.MealCalendarScreen
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -40,6 +43,7 @@ sealed class Screen(val route: String) {
     data object SignUp : Screen("signup_screen")
     data object MealList : Screen("meal_list_screen")
     data object AISuggestions : Screen("ai_suggestions_screen")
+    data object MealCalendar : Screen("meal_calendar_screen")
     data object AddRecipe : Screen(
         "add_recipe_screen" +
                 "?title={title}" +
@@ -196,6 +200,9 @@ fun AppNavHost(
         }
         composable(Screen.AISuggestions.route) {
             PlaceholderScreen(screenName = "AI Meal Suggestions Screen")
+        }
+        composable(Screen.MealCalendar.route) {
+            MealCalendarScreen(navController = navController)
         }
 
         // Updated composable for AddRecipeScreen

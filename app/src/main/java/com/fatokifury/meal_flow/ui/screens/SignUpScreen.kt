@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -76,15 +77,16 @@ fun SignUpScreen(
     val passwordLengthError = stringResource(R.string.signup_password_min_length)
     val confirmPasswordMismatchError = stringResource(R.string.signup_passwords_do_not_match)
 
-//    val interactionSource = remember { MutableInteractionSource() }
-//    val isPressed by interactionSource.collectIsPressedAsState()
-//
-//    // This should ideally be handled in the ViewModel, but for simplicity...
-//    if (isPressed) {
-//        authViewModel.onSignUpButtonPress()
-//    } else {
-//        authViewModel.onSignUpButtonRelease()
-//    }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            authViewModel.onSignUpButtonPress()
+        } else {
+            authViewModel.onSignUpButtonRelease()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -280,7 +282,7 @@ fun SignUpScreen(
                         enabled = !uiState.isLoading,
                         modifier = Modifier
                             .fillMaxWidth(),
-//                        interactionSource = interactionSource
+                        interactionSource = interactionSource
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
@@ -308,10 +310,7 @@ fun SignUpScreen(
         Spacer(modifier = Modifier.height(Dimens.spacing_large))
 
         // Login Prompt
-        TextButton(
-            onClick = { if (!uiState.isLoading) authViewModel.navigateToLogin() },
-            enabled = !uiState.isLoading
-        ) {
+        TextButton(onClick = { if (!uiState.isLoading) authViewModel.navigateToLogin() }, enabled = !uiState.isLoading) {
             Text(stringResource(id = R.string.signup_login_prompt))
         }
 

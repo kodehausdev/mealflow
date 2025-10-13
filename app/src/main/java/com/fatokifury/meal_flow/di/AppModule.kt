@@ -1,10 +1,16 @@
 package com.fatokifury.meal_flow.di
 
-
-import com.fatokifury.meal_flow.BuildConfig
-import com.google.ai.client.generativeai.GenerativeModel
-import com.google.firebase.auth.FirebaseAuth
+import com.fatokifury.meal_flow.data.AuthRepository
+import com.fatokifury.meal_flow.data.AuthRepositoryImpl
+import com.fatokifury.meal_flow.data.RecipeRepository
+import com.fatokifury.meal_flow.data.RecipeRepositoryImpl
+import com.fatokifury.meal_flow.navigation.NavigationService
+import com.fatokifury.meal_flow.navigation.NavigationServiceImpl
+import com.google.firebase.auth.FirebaseAuth // <-- Import this
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,22 +19,30 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule {
+abstract class AppModule {
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 
-    @Provides
+    @Binds
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+    abstract fun bindRecipeRepository(impl: RecipeRepositoryImpl): RecipeRepository
 
-//    @Provides
-//    @Singleton
-//    fun provideGenerativeModel(): GenerativeModel {
-//        return GenerativeModel(
-//            modelName = "gemini-pro", // Or your desired model, e.g., "gemini-1.5-flash"
-//            apiKey = BuildConfig.GEMINI_API_KEY
-//        )
-//    }
+    @Binds
+    @Singleton
+    abstract fun bindNavigationService(impl: NavigationServiceImpl): NavigationService
+
+    companion object {
+
+        // V-- THIS IS THE FIX --V
+        @Provides
+        @Singleton
+        fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+        // ^-- THIS IS THE FIX --^
+
+        @Provides
+        @Singleton
+        fun provideFirebaseFirestore(): FirebaseFirestore = Firebase.firestore
+    }
 }

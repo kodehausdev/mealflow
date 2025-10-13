@@ -25,12 +25,16 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.fatokifury.meal_flow.R
+import com.fatokifury.meal_flow.ui.theme.Dimens
+import com.fatokifury.meal_flow.ui.viewmodels.MealCalendarUiState
 import com.fatokifury.meal_flow.ui.viewmodels.MealCalendarViewModel
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -49,7 +53,6 @@ const val CALENDAR_SCREEN_TAG = "MealCalendarScreen"
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealCalendarScreen(
-    navController: NavController,
     viewModel: MealCalendarViewModel = hiltViewModel()
 ) {
     Log.d(CALENDAR_SCREEN_TAG, "Composable rendering...")
@@ -144,8 +147,8 @@ fun MealCalendarScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues) // Apply scaffold padding
-                    .padding(16.dp), // Overall padding for the card content
-                shape = RoundedCornerShape(32.dp),
+                    .padding(Dimens.spacing_medium), // Overall padding for the card content
+                shape = RoundedCornerShape(Dimens.spacing_extra_large),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White.copy(alpha = 0.08f) // MODIFIED: More transparent main card
                 ),
@@ -154,7 +157,7 @@ fun MealCalendarScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 24.dp) // Inner padding for card content
+                        .padding(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_large) // Inner padding for card content
                 ) {
                     Log.d(CALENDAR_SCREEN_TAG, "Rendering MonthNavigationHeader...")
                     ModernMonthNavigationHeader(
@@ -164,13 +167,13 @@ fun MealCalendarScreen(
                     )
                     Log.d(CALENDAR_SCREEN_TAG, "MonthNavigationHeader rendered.")
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.spacing_medium))
 
                     Log.d(CALENDAR_SCREEN_TAG, "Rendering DaysOfWeekHeader...")
                     ModernDaysOfWeekHeader(daysOfWeek = uiState.daysOfWeek)
                     Log.d(CALENDAR_SCREEN_TAG, "DaysOfWeekHeader rendered.")
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
 
                     Log.d(CALENDAR_SCREEN_TAG, "Rendering HorizontalCalendar...")
                     HorizontalCalendar(
@@ -192,17 +195,17 @@ fun MealCalendarScreen(
                     )
                     Log.d(CALENDAR_SCREEN_TAG, "HorizontalCalendar rendered.")
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(Dimens.spacing_large))
 
                     // Display selected date and planned meals more elegantly
                     Text(
-                        text = "Meals for: ${uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))}",
+                        text = stringResource(id = R.string.meal_calendar_meals_for_date, uiState.selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy"))),
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = (-0.5).sp
                         ),
                         color = Color.White,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = Dimens.spacing_small)
                     )
 
                     if (uiState.plannedMealsForSelectedDate.isNotEmpty()) {
@@ -216,8 +219,8 @@ fun MealCalendarScreen(
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    shape = RoundedCornerShape(12.dp),
+                                        .padding(vertical = Dimens.spacing_extra_small),
+                                    shape = RoundedCornerShape(Dimens.spacing_medium - Dimens.spacing_extra_small),
                                     colors = CardDefaults.cardColors(
                                         containerColor = Color.White.copy(alpha = 0.12f) // MODIFIED: More transparent meal items
                                     )
@@ -226,7 +229,7 @@ fun MealCalendarScreen(
                                         text = mealName,
                                         style = MaterialTheme.typography.bodyLarge,
                                         color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                        modifier = Modifier.padding(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_medium - Dimens.spacing_extra_small)
                                     )
                                 }
                             }
@@ -240,7 +243,7 @@ fun MealCalendarScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No meals planned for this day.",
+                                text = stringResource(id = R.string.meal_calendar_no_meals_planned),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.8f)
                             )
@@ -255,8 +258,6 @@ fun MealCalendarScreen(
     Log.d(CALENDAR_SCREEN_TAG, "Composable rendering finished.")
 }
 
-// ModernTopAppBar, ModernMonthNavigationHeader, ModernNavigationButton, ModernDaysOfWeekHeader, ModernDayView,
-// Ensure they are correctly defined in your file.
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -265,16 +266,16 @@ fun ModernTopAppBar() {
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium - Dimens.spacing_extra_small)
             ) {
                 Icon(
                     imageVector = Icons.Default.Restaurant,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(Dimens.icon_size_medium - Dimens.spacing_extra_small)
                 )
                 Text(
-                    text = "Meal Calendar",
+                    text = stringResource(id = R.string.meal_calendar_title),
                     color = Color.White,
                     style = MaterialTheme.typography.headlineSmall.copy(
                         fontWeight = FontWeight.Bold,
@@ -359,7 +360,7 @@ fun ModernNavigationButton(
 
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(Dimens.icon_size_medium + Dimens.spacing_medium)
             .scale(scale)
             .clip(CircleShape)
             .background(
@@ -381,7 +382,7 @@ fun ModernNavigationButton(
             imageVector = icon,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(Dimens.icon_size_small)
         )
     }
 
@@ -398,7 +399,7 @@ fun ModernDaysOfWeekHeader(daysOfWeek: List<DayOfWeek>) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp) // Adjusted padding from previous version for consistency
+            .padding(horizontal = Dimens.spacing_small) // Adjusted padding from previous version for consistency
     ) {
         if (daysOfWeek.isEmpty()) {
             Log.w(CALENDAR_SCREEN_TAG, "daysOfWeek is empty in DaysOfWeekHeader!")
@@ -460,14 +461,14 @@ fun ModernDayView(
     Box(
         modifier = Modifier
             .aspectRatio(1f)
-            .padding(4.dp)
+            .padding(Dimens.spacing_extra_small)
             .scale(scale)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(Dimens.spacing_medium))
             .background(backgroundColor)
             .border(
                 width = if (isToday && !isSelected) 2.dp else 0.dp,
                 color = if (isToday && !isSelected) Color.White.copy(alpha = 0.6f) else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(Dimens.spacing_medium)
             )
             .clickable(
                 enabled = day.position == DayPosition.MonthDate,
@@ -492,10 +493,10 @@ fun ModernDayView(
 
             // Meal indicator dot (more prominent if selected)
             if (hasMeals && day.position == DayPosition.MonthDate) {
-                Spacer(modifier = Modifier.height(3.dp))
+                Spacer(modifier = Modifier.height(Dimens.spacing_extra_small))
                 Box(
                     modifier = Modifier
-                        .size(if (isSelected) 6.dp else 4.dp) // Larger dot if selected
+                        .size(if (isSelected) Dimens.spacing_small - Dimens.spacing_extra_small else Dimens.spacing_extra_small) // Larger dot if selected
                         .background(
                             if (isSelected) Color(0xFF6366F1) else Color.White, // Match text color or white
                             CircleShape
@@ -513,15 +514,4 @@ fun ModernDayView(
     }
 }
 
-// ModernSelectedDateCard is removed as its functionality is integrated into the main screen Column.
-//
-//@Preview(showBackground = true, name = "Meal Calendar Screen Preview")
-//@Composable
-//fun MealCalendarScreenPreview() {
-//    // Consider wrapping with your app's theme if you have one
-//    // com.fatokifury.meal_flow.ui.theme.MealFlowTheme {
-//    MealCalendarScreen(
-//        navController = androidx.navigation.compose.rememberNavController()
-//        // ViewModel will be provided by hiltViewModel default in the actual composable
-//    )
-    // }
+

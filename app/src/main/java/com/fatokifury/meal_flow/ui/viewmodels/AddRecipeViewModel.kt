@@ -1,222 +1,177 @@
 package com.fatokifury.meal_flow.ui.viewmodels
 
-import androidx.lifecycle.SavedStateHandle // Added
+import android.net.Uri
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fatokifury.meal_flow.data.RecipeRepository
 import com.fatokifury.meal_flow.model.Recipe
+import com.fatokifury.meal_flow.navigation.NavigationService
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
-import kotlinx.serialization.builtins.ListSerializer // Added for JSON
-import kotlinx.serialization.builtins.serializer // Added for JSON
-import kotlinx.serialization.json.Json // Added for JSON
-import java.net.URLDecoder // Added
-import java.nio.charset.StandardCharsets // Added
 import javax.inject.Inject
 
 data class AddRecipeUiState(
+    val recipeId: String? = null,
     val title: String = "",
-    val description: String = "", // Added description field
+    val description: String = "",
     val ingredients: List<String> = emptyList(),
     val currentIngredient: String = "",
     val steps: List<String> = emptyList(),
     val currentStep: String = "",
-    val imageUrl: String? = null,
+    val selectedImageUri: Uri? = null,
     val tags: List<String> = emptyList(),
     val currentTag: String = "",
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
+    val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
 
 @HiltViewModel
 class AddRecipeViewModel @Inject constructor(
-    private val firestore: FirebaseFirestore,
+    private val recipeRepository: RecipeRepository,
     private val auth: FirebaseAuth,
-    private val savedStateHandle: SavedStateHandle // Added SavedStateHandle
+    private val navigationService: NavigationService,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddRecipeUiState())
     val uiState: StateFlow<AddRecipeUiState> = _uiState.asStateFlow()
 
+    private val recipeId: String? = savedStateHandle["recipeId"]
+
     init {
-        // Retrieve and decode arguments from SavedStateHandle
-        val initialTitle = savedStateHandle.get<String>("title")?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) } ?: ""
-        val initialImageUrl = savedStateHandle.get<String>("imageUrl")?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) }
-        val initialDescription = savedStateHandle.get<String>("description")?.let { URLDecoder.decode(it, StandardCharsets.UTF_8.toString()) } ?: ""
-
-        val json = Json { ignoreUnknownKeys = true; isLenient = true } // Configure Json parser
-
-        val initialIngredients = savedStateHandle.get<String>("ingredientsJson")?.let {
-            try {
-                json.decodeFromString(ListSerializer(String.serializer()), URLDecoder.decode(it, StandardCharsets.UTF_8.toString()))
-            } catch (e: Exception) { emptyList<String>() /* Handle parsing error, default to empty */ }
-        } ?: emptyList()
-
-        val initialSteps = savedStateHandle.get<String>("stepsJson")?.let {
-            try {
-                json.decodeFromString(ListSerializer(String.serializer()), URLDecoder.decode(it, StandardCharsets.UTF_8.toString()))
-            } catch (e: Exception) { emptyList<String>() }
-        } ?: emptyList()
-
-        val initialTags = savedStateHandle.get<String>("tagsJson")?.let {
-            try {
-                json.decodeFromString(ListSerializer(String.serializer()), URLDecoder.decode(it, StandardCharsets.UTF_8.toString()))
-            } catch (e: Exception) { emptyList<String>() }
-        } ?: emptyList()
-
-        _uiState.value = AddRecipeUiState(
-            title = initialTitle,
-            imageUrl = initialImageUrl,
-            description = initialDescription,
-            ingredients = initialIngredients,
-            steps = initialSteps,
-            tags = initialTags
-        )
+        if (recipeId != null && recipeId != "null") {
+            loadRecipeForEditing(recipeId)
+        }
     }
 
+    private fun loadRecipeForEditing(id: String) {
+        _uiState.update { it.copy(isLoading = true) }
+        viewModelScope.launch {
+            val result = recipeRepository.getRecipeById(id)
+            result.onSuccess { recipe ->
+                _uiState.update {
+                    it.copy(
+                        recipeId = recipe.id,
+                        title = recipe.title,
+                        description = recipe.description,
+                        ingredients = recipe.ingredients,
+                        steps = recipe.steps,
+                        tags = recipe.tags,
+                        selectedImageUri = recipe.imageUrl?.let { Uri.parse(it) },
+                        isLoading = false
+                    )
+                }
+            }.onFailure { exception ->
+                _uiState.update { it.copy(isLoading = false, errorMessage = exception.message) }
+            }
+        }
+    }
+
+    // --- UI Event Handlers ---
 
     fun onTitleChange(newTitle: String) {
-        _uiState.value = _uiState.value.copy(title = newTitle)
+        _uiState.update { it.copy(title = newTitle) }
     }
 
-    // Added onDescriptionChange
     fun onDescriptionChange(newDescription: String) {
-        _uiState.value = _uiState.value.copy(description = newDescription)
+        _uiState.update { it.copy(description = newDescription) }
+    }
+
+    fun onCurrentImageUrlChange(newUri: Uri?) {
+        _uiState.update { it.copy(selectedImageUri = newUri) }
     }
 
     fun onCurrentIngredientChange(newIngredient: String) {
-        _uiState.value = _uiState.value.copy(currentIngredient = newIngredient)
+        _uiState.update { it.copy(currentIngredient = newIngredient) }
     }
 
     fun addIngredient() {
         val currentIngredient = _uiState.value.currentIngredient.trim()
         if (currentIngredient.isNotBlank()) {
             val updatedIngredients = _uiState.value.ingredients + currentIngredient
-            _uiState.value = _uiState.value.copy(
-                ingredients = updatedIngredients,
-                currentIngredient = ""
-            )
+            _uiState.update { it.copy(ingredients = updatedIngredients, currentIngredient = "") }
         }
     }
 
     fun removeIngredient(ingredient: String) {
         val updatedIngredients = _uiState.value.ingredients - ingredient
-        _uiState.value = _uiState.value.copy(ingredients = updatedIngredients)
+        _uiState.update { it.copy(ingredients = updatedIngredients) }
     }
 
-
     fun onCurrentStepChange(newStep: String) {
-        _uiState.value = _uiState.value.copy(currentStep = newStep)
+        _uiState.update { it.copy(currentStep = newStep) }
     }
 
     fun addStep() {
         val currentStep = _uiState.value.currentStep.trim()
         if (currentStep.isNotBlank()) {
             val updatedSteps = _uiState.value.steps + currentStep
-            _uiState.value = _uiState.value.copy(
-                steps = updatedSteps,
-                currentStep = ""
-            )
+            _uiState.update { it.copy(steps = updatedSteps, currentStep = "") }
         }
     }
 
     fun removeStep(step: String) {
         val updatedSteps = _uiState.value.steps - step
-        _uiState.value = _uiState.value.copy(steps = updatedSteps)
+        _uiState.update { it.copy(steps = updatedSteps) }
     }
 
     fun onCurrentTagChange(newTag: String) {
-        _uiState.value = _uiState.value.copy(currentTag = newTag)
+        _uiState.update { it.copy(currentTag = newTag) }
     }
 
     fun addTag() {
         val currentTag = _uiState.value.currentTag.trim()
         if (currentTag.isNotBlank()) {
             val updatedTags = _uiState.value.tags + currentTag
-            _uiState.value = _uiState.value.copy(
-                tags = updatedTags,
-                currentTag = ""
-            )
+            _uiState.update { it.copy(tags = updatedTags, currentTag = "") }
         }
     }
 
     fun removeTag(tag: String) {
         val updatedTags = _uiState.value.tags - tag
-        _uiState.value = _uiState.value.copy(tags = updatedTags)
-    }
-
-
-    fun onImageUrlChange(newUrl: String?) {
-        _uiState.value = _uiState.value.copy(imageUrl = newUrl)
+        _uiState.update { it.copy(tags = updatedTags) }
     }
 
     fun saveRecipe() {
-        if (_uiState.value.title.isBlank()) {
-            _uiState.value = _uiState.value.copy(errorMessage = "Title cannot be empty.")
+        val currentState = _uiState.value
+        if (currentState.title.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Title cannot be empty.") }
             return
         }
 
-        val currentUser = auth.currentUser
-        if (currentUser == null) {
-            _uiState.value = _uiState.value.copy(errorMessage = "User not logged in.")
-            return
-        }
+        _uiState.update { it.copy(isSaving = true) }
 
-        _uiState.value = _uiState.value.copy(isSaving = true, errorMessage = null)
-
-        var finalIngredients = _uiState.value.ingredients
-        if (_uiState.value.currentIngredient.isNotBlank()) {
-            finalIngredients = finalIngredients + _uiState.value.currentIngredient.trim()
-        }
-
-        var finalSteps = _uiState.value.steps
-        if (_uiState.value.currentStep.isNotBlank()) {
-            finalSteps = finalSteps + _uiState.value.currentStep.trim()
-        }
-
-        var finalTags = _uiState.value.tags
-        if (_uiState.value.currentTag.isNotBlank()) {
-            finalTags = finalTags + _uiState.value.currentTag.trim()
-        }
+        val recipeToSave = Recipe(
+            id = currentState.recipeId ?: "",
+            title = currentState.title,
+            description = currentState.description,
+            ingredients = currentState.ingredients + (if(currentState.currentIngredient.isNotBlank()) listOf(currentState.currentIngredient.trim()) else emptyList()),
+            steps = currentState.steps + (if(currentState.currentStep.isNotBlank()) listOf(currentState.currentStep.trim()) else emptyList()),
+            tags = currentState.tags + (if(currentState.currentTag.isNotBlank()) listOf(currentState.currentTag.trim()) else emptyList()),
+            imageUrl = currentState.selectedImageUri.toString(),
+            createdBy = auth.currentUser?.uid ?: ""
+        )
 
         viewModelScope.launch {
-            try {
-                val newRecipeRef = firestore.collection("recipes").document()
-
-                val recipeToSave = Recipe(
-                    id = newRecipeRef.id,
-                    title = _uiState.value.title,
-                    description = _uiState.value.description, // Save description
-                    ingredients = finalIngredients,
-                    steps = finalSteps,
-                    imageUrl = _uiState.value.imageUrl,
-                    tags = finalTags,
-                    createdBy = currentUser.uid
-                )
-
-                newRecipeRef.set(recipeToSave).await()
-                _uiState.value = _uiState.value.copy(
-                    isSaving = false,
-                    saveSuccess = true,
-                    currentIngredient = "",
-                    currentStep = "",
-                    currentTag = ""
-                )
-            } catch (e: Exception) {
-                _uiState.value =
-                    _uiState.value.copy(isSaving = false, errorMessage = e.message ?: "Failed to save recipe.")
-            }
+            recipeRepository.saveRecipe(recipeToSave)
+            _uiState.update { it.copy(isSaving = false, saveSuccess = true) }
         }
     }
 
-    fun resetSaveState() {
-        _uiState.value = _uiState.value.copy(saveSuccess = false, errorMessage = null, isSaving = false) // also reset isSaving
+    fun onSaveSuccess() {
+        _uiState.update { it.copy(saveSuccess = false) } // Reset state
+        navigationService.goBack()
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }
-

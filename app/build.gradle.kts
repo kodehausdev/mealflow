@@ -161,4 +161,9 @@ dependencies {
     // ========== DEBUG DEPENDENCIES ==========
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // ...
+
+    // ADD THIS LINE FOR VOLLEY
+    implementation(libs.volley)
 }

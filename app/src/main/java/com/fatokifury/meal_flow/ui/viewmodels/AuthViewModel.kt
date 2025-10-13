@@ -1,145 +1,196 @@
 package com.fatokifury.meal_flow.ui.viewmodels
 
-import kotlinx.coroutines.tasks.await // If not already there for auth calls
+import android.util.Patterns
+import androidx.compose.animation.core.copy
+import androidx.compose.ui.semantics.password
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.firestore.FirebaseFirestore
+import com.fatokifury.meal_flow.data.AuthRepository
+import com.fatokifury.meal_flow.navigation.NavigationService
+import com.fatokifury.meal_flow.navigation.Screen
+import com.fatokifury.meal_flow.ui.screens.LoginUiState
+import com.fatokifury.meal_flow.ui.screens.SignUpUiState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// Sealed Interface to represent different states of an authentication attempt
-sealed interface AuthResultState {
-    object Idle : AuthResultState
-    object Loading : AuthResultState
-    data class Success(val uid: String) :
-        AuthResultState // Include UID for navigation or further actions
-
-    data class Error(val message: String) : AuthResultState
+sealed class AuthResultEvent {
+    data class Success(val message: String) : AuthResultEvent()
+    data class Error(val message: String) : AuthResultEvent()
 }
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val navigationService: NavigationService,
+    private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    private val _authState = MutableStateFlow<AuthResultState>(AuthResultState.Idle)
-    val authState: StateFlow<AuthResultState> = _authState.asStateFlow()
+    private val _loginUiState = MutableStateFlow(LoginUiState())
+    val loginUiState = _loginUiState.asStateFlow()
 
+    private val _signUpUiState = MutableStateFlow(SignUpUiState())
+    val signUpUiState = _signUpUiState.asStateFlow()
 
+    private val _authEvents = Channel<AuthResultEvent>()
+    val authEvents = _authEvents.receiveAsFlow()
 
-    fun signUpUser(fullName: String, email: String, pass: String) {
+    private var holdJob: Job? = null
+    private val holdDurationMillis = 1500L
+
+    // --- Navigation --- //
+    fun navigateToLogin() = navigationService.navigateAndPopUp(Screen.Login.route, Screen.SignUp.route)
+    fun navigateToSignUp() = navigationService.navigateAndPopUp(Screen.SignUp.route, Screen.Login.route)
+
+    // --- Login Logic --- //
+    fun onLoginEmailChange(email: String) {
+        _loginUiState.update { it.copy(email = email) }
+    }
+
+    fun onLoginPasswordChange(password: String) {
+        _loginUiState.update { it.copy(pass = password) } // 'pass' matches LoginUiState
+    }
+
+    fun onLoginTogglePasswordVisibility() {
+        _loginUiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
+    }
+
+    fun loginUser() {
+        val state = _loginUiState.value
+        if (!validateEmail(state.email) || state.pass.isEmpty()) {
+            // Optionally send an error event
+            return
+        }
         viewModelScope.launch {
-            println("VM: signUpUser coroutine STARTED.")
-            _authState.value = AuthResultState.Loading
-            try {
-                // Basic validation
-                if (fullName.isBlank()) {
-                    _authState.value = AuthResultState.Error("Full name cannot be empty.")
-                    return@launch
-                }
-                if (email.isBlank() || pass.isBlank()) {
-                    _authState.value = AuthResultState.Error("Email and password cannot be empty.")
-                    return@launch
-                }
-                if (pass.length < 6) {
-                    _authState.value =
-                        AuthResultState.Error("Password must be at least 6 characters.")
-                    return@launch
-                }
-                println("VM: Validations passed (if any).")
-                println("VM: Calling createUserWithEmailAndPassword(...).await()")
-
-                val authResult = auth.createUserWithEmailAndPassword(email, pass).await()
-                println("VM: createUserWithEmailAndPassword(...).await() COMPLETED.")
-                val firebaseUser = authResult.user
-                if (firebaseUser != null) {
-                    println("VM: Firebase user is NOT NULL (uid: ${firebaseUser.uid}).")
-                    // Create a user profile document in Firestore
-                    val userProfile = hashMapOf(
-                        "uid" to firebaseUser.uid,
-                        "fullName" to fullName,
-                        "email" to firebaseUser.email, // Use email from the created user
-                        "createdAt" to com.google.firebase.Timestamp.now() // Optional: record creation time
-                    )
-                    println("VM: User profile created: $userProfile")
-
-                    println("VM: Calling firestore.collection.document.set(...).await()")
-                    // Save to Firestore in a 'users' collection, document ID is user's UID
-                    firestore.collection("users").document(firebaseUser.uid)
-                        .set(userProfile)
-                        .await() // Wait for Firestore operation to complete
-                    println("VM: firestore.collection.document.set(...).await() COMPLETED.")
-
-
-                    _authState.value = AuthResultState.Success(firebaseUser.uid)
-                    println("VM: Emitted AuthResultState.Success.")
-                } else {
-                    println("VM: Firebase user IS NULL after creation attempt.")
-                    _authState.value = AuthResultState.Error("Sign up failed. Please try again.")
-                    println("VM: Emitted AuthResultState.Error (user null).")
-                }
-            } catch (e: FirebaseAuthUserCollisionException) {
-                println("VM: EXCEPTION in signUpUser coroutine: ${e.message}")
-                _authState.value =
-                    AuthResultState.Error("An account already exists with this email address.")
-                println("VM: Emitted AuthResultState.Error (exception).")
-            } catch (e: FirebaseAuthInvalidCredentialsException) {
-                _authState.value = AuthResultState.Error("Invalid email format.")
-                println("VM: signUpUser coroutine FINISHED (finally block).")
-            } catch (e: Exception) { // Catch other exceptions, including potential Firestore errors
-                _authState.value =
-                    AuthResultState.Error(e.message ?: "An unknown error occurred during sign up.")
+            _loginUiState.update { it.copy(isLoading = true) }
+            val result = authRepository.login(state.email, state.pass)
+            result.onSuccess {
+                _authEvents.send(AuthResultEvent.Success("Login Successful!"))
+                navigationService.navigateAndPopUp(Screen.MealList.route, Screen.Login.route)
+            }.onFailure { exception ->
+                _authEvents.send(AuthResultEvent.Error(exception.message ?: "Unknown login error"))
             }
-            println("VM: signUpUser METHOD CALL FINISHED (outer function).") // This will print before the coroutine body usually.
+            _loginUiState.update { it.copy(isLoading = false) }
         }
     }
 
+    // --- Sign Up Logic (Upgraded) --- //
 
-    fun loginUser(email: String, pass: String) {
-        viewModelScope.launch {
-            _authState.value = AuthResultState.Loading
-            try {
-                if (email.isBlank() || pass.isBlank()) {
-                    _authState.value = AuthResultState.Error("Email and password cannot be empty.")
-                    return@launch
-                }
+    fun onSignUpFullNameChange(name: String) {
+        _signUpUiState.update { it.copy(fullName = name) }
+    }
 
-                val result = auth.signInWithEmailAndPassword(email, pass).await()
-                val user = result.user
-                if (user != null) {
-                    _authState.value = AuthResultState.Success(user.uid)
-                } else {
-                    _authState.value = AuthResultState.Error("Login failed. Please try again.")
+    fun onSignUpEmailChange(email: String) {
+        _signUpUiState.update { it.copy(email = email, isEmailError = !validateEmail(email) && email.isNotEmpty()) }
+    }
+
+    fun onSignUpPasswordChange(password: String) {
+        _signUpUiState.update {
+            it.copy(
+                password = password,
+                isPasswordError = password.isNotEmpty() && password.length < 6
+            )
+        }
+    }
+
+    fun onSignUpConfirmPasswordChange(password: String) {
+        val state = _signUpUiState.value
+        _signUpUiState.update {
+            it.copy(
+                confirmPassword = password,
+                isConfirmPasswordError = password.isNotEmpty() && password != state.password
+            )
+        }
+    }
+
+    fun onSignUpTogglePasswordVisibility() {
+        _signUpUiState.update { it.copy(isPasswordVisible = !it.isPasswordVisible) }
+    }
+    fun onSignUpToggleConfirmPasswordVisibility() {
+        _signUpUiState.update { it.copy(isConfirmPasswordVisible = !it.isConfirmPasswordVisible) }
+    }
+
+    private fun allSignUpFieldsValid(): Boolean {
+        val state = _signUpUiState.value
+        val isFullNameValid = state.fullName.isNotBlank()
+        val isEmailValid = validateEmail(state.email)
+        val isPasswordValid = state.password.length >= 6
+        val isConfirmPasswordValid = state.password == state.confirmPassword && state.confirmPassword.isNotBlank()
+
+        val allValid = isFullNameValid && isEmailValid && isPasswordValid && isConfirmPasswordValid
+
+        if (!allValid) {
+            _signUpUiState.update {
+                it.copy(
+                    isEmailError = !isEmailValid,
+                    isPasswordError = !isPasswordValid,
+                    isConfirmPasswordError = !isConfirmPasswordValid
+                )
+            }
+        }
+        return allValid
+    }
+
+    fun onSignUpButtonPress() {
+        if (_signUpUiState.value.isSubmitting) return
+
+        holdJob?.cancel()
+        holdJob = viewModelScope.launch {
+            if (allSignUpFieldsValid()) {
+                _signUpUiState.update { it.copy(showHoldIndicator = true) }
+                val startTime = System.currentTimeMillis()
+                while (System.currentTimeMillis() - startTime < holdDurationMillis) {
+                    val progress = (System.currentTimeMillis() - startTime).toFloat() / holdDurationMillis
+                    _signUpUiState.update { it.copy(holdProgress = progress) }
+                    delay(16)
                 }
-            } catch (e: FirebaseAuthInvalidUserException) {
-                _authState.value =
-                    AuthResultState.Error("No account found with this email address.")
-            } catch (e: FirebaseAuthInvalidCredentialsException) {
-                _authState.value = AuthResultState.Error("Incorrect password. Please try again.")
-            } catch (e: Exception) {
-                _authState.value =
-                    AuthResultState.Error(e.message ?: "An unknown error occurred during login.")
+                _signUpUiState.update { it.copy(holdProgress = 1f, isSubmitting = true) }
+                signUpUser() // Call the actual sign-up function
+            } else {
+                // Instantly reset if fields are not valid
+                resetHoldState()
             }
         }
     }
 
-    // Function to reset the auth state, e.g., after an error message has been shown
-    fun resetAuthState() {
-        _authState.value = AuthResultState.Idle
+    fun onSignUpButtonRelease() {
+        if (_signUpUiState.value.holdProgress < 1f) {
+            holdJob?.cancel()
+            resetHoldState()
+        }
     }
 
-    // TODO:
-    // - Implement User login state observation (e.g., auth.authStateFlow()) to automatically update UI
-    // - Sign in with Google
-    // - Sign out
-    // - Link user to a family or create one (this would involve Firestore interaction with the UID)
+    private fun signUpUser() {
+        val state = _signUpUiState.value
+        if (!state.isSubmitting) return
+
+        viewModelScope.launch {
+            _signUpUiState.update { it.copy(isLoading = true) }
+            val result = authRepository.signUp(state.email, state.password)
+            result.onSuccess {
+                _authEvents.send(AuthResultEvent.Success("Sign Up Successful!"))
+                navigationService.navigateAndPopUp(Screen.MealList.route, Screen.SignUp.route)
+            }.onFailure { exception ->
+                _authEvents.send(AuthResultEvent.Error(exception.message ?: "Unknown sign up error"))
+            }
+            _signUpUiState.update { it.copy(isLoading = false) }
+            resetHoldState() // Reset state after completion
+        }
+    }
+
+    private fun resetHoldState() {
+        holdJob?.cancel()
+        _signUpUiState.update { it.copy(showHoldIndicator = false, holdProgress = 0f, isSubmitting = false) }
+    }
+
+    private fun validateEmail(text: String): Boolean {
+        if (text.isBlank()) return false
+        return Patterns.EMAIL_ADDRESS.matcher(text).matches()
+    }
 }

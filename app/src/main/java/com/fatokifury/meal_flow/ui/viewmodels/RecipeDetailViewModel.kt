@@ -3,14 +3,16 @@ package com.fatokifury.meal_flow.ui.viewmodels
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fatokifury.meal_flow.data.RecipeRepository
 import com.fatokifury.meal_flow.model.Recipe
-import com.google.firebase.firestore.FirebaseFirestore
+import com.fatokifury.meal_flow.navigation.NavigationService
+import com.fatokifury.meal_flow.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 data class RecipeDetailUiState(
@@ -21,14 +23,14 @@ data class RecipeDetailUiState(
 
 @HiltViewModel
 class RecipeDetailViewModel @Inject constructor(
-    private val firestore: FirebaseFirestore,
-    savedStateHandle: SavedStateHandle
+    private val recipeRepository: RecipeRepository,
+    savedStateHandle: SavedStateHandle,
+    private val navigationService: NavigationService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecipeDetailUiState())
     val uiState: StateFlow<RecipeDetailUiState> = _uiState.asStateFlow()
 
-    // Assuming your navigation argument is named "recipeId"
     private val recipeId: String? = savedStateHandle["recipeId"]
 
     init {
@@ -36,36 +38,47 @@ class RecipeDetailViewModel @Inject constructor(
     }
 
     private fun loadRecipeDetails() {
-        if (recipeId == null) {
-            _uiState.value = RecipeDetailUiState(isLoading = false, errorMessage = "Recipe ID not found.")
+        if (recipeId == null || recipeId == "new") {_uiState.update { it.copy(isLoading = false, errorMessage = "Recipe ID not found.") }
             return
         }
 
-        _uiState.value = RecipeDetailUiState(isLoading = true, errorMessage = null) // Start loading
+        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
-            try {
-                val documentSnapshot = firestore.collection("recipes")
-                    .document(recipeId)
-                    .get()
-                    .await()
+            // 1. Call the function and store the 'Result<Recipe>' object.
+            val result: Result<Recipe> = recipeRepository.getRecipeById(recipeId)
 
-                if (documentSnapshot.exists()) {
-                    val recipe = documentSnapshot.toObject(Recipe::class.java)
-                    _uiState.value = RecipeDetailUiState(recipe = recipe, isLoading = false)
-                } else {
-                    _uiState.value = RecipeDetailUiState(isLoading = false, errorMessage = "Recipe not found.")
+            // 2. Use the built-in 'onSuccess' and 'onFailure' handlers to unwrap the Result.
+            result.onSuccess { recipe ->
+                // This code only runs if the result was a success.
+                // The 'recipe' variable here is the actual Recipe object.
+                _uiState.update { it.copy(recipe = recipe, isLoading = false) }
+
+            }.onFailure { exception ->
+                // This code only runs if the result was a failure.
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = exception.message ?: "An unknown error occurred"
+                    )
                 }
-            } catch (e: Exception) {
-                _uiState.value = RecipeDetailUiState(
-                    isLoading = false,
-                    errorMessage = "Failed to load recipe details: ${e.message}"
-                )
             }
         }
     }
 
-    fun clearErrorMessage() {
-        _uiState.value = _uiState.value.copy(errorMessage = null)
+
+        // These functions are now correctly defined at the class level.
+        fun onNavigateBack() {
+            navigationService.goBack()
+        }
+
+        fun onEditRecipeClicked() {
+            if (recipeId != null) {
+                navigationService.navigate(Screen.AddRecipe.createRoute(recipeId))
+            }
+        }
+
+        fun clearErrorMessage() {
+            _uiState.update { it.copy(errorMessage = null) }
+        }
     }
-}

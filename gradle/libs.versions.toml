@@ -1,6 +1,7 @@
 [versions]
 agp = "8.12.1"
 composeCalendarView = "2.5.0"
+coreKtxVersion = "1.13.1"
 ktor = "2.3.5"
 jsoup = "1.17.2"
 coilCompose = "2.7.0"
@@ -39,10 +40,12 @@ mockk = "1.14.5"
 # Gemini API
 gemini = "0.9.0"
 benchmarkCommon = "1.4.1"
+volley = "1.2.1"
 
 [libraries]
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation"}
+androidx-core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 compose-calendar-view = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "composeCalendarView" }
 
 # Networking
@@ -108,6 +111,7 @@ junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 androidx-benchmark-common = { group = "androidx.benchmark", name = "benchmark-common", version.ref = "benchmarkCommon" }
+volley = { module = "com.android.volley:volley", version.ref = "volley" }
 
 [bundles]
 compose = [

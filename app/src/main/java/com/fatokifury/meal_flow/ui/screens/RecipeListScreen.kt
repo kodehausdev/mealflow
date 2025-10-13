@@ -1,6 +1,5 @@
 package com.fatokifury.meal_flow.ui.screens
 
-import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -22,11 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,20 +44,24 @@ fun RecipeListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current // <-- GET THE CONTEXT HERE, in the Composable scope
 
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlInput by remember { mutableStateOf(TextFieldValue("")) }
 
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let {
+    // Listen for user messages from the ViewModel
+    LaunchedEffect(uiState.userMessage) {
+        uiState.userMessage?.let { userMessage ->
             scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = it,
+                val result = snackbarHostState.showSnackbar(
+                    message = userMessage.message,
+                    actionLabel = if (userMessage.recipe != null) "Undo" else null,
                     duration = SnackbarDuration.Short
                 )
+                if (result == SnackbarResult.ActionPerformed) {
+                    userMessage.recipe?.let { viewModel.undoDelete(it) }
+                }
             }
-            viewModel.clearErrorMessage()
+            viewModel.userMessageShown()
         }
     }
 
@@ -115,13 +118,7 @@ fun RecipeListScreen(
                     CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 }
                 uiState.recipes.isEmpty() -> {
-                    Text(
-                        text = stringResource(id = R.string.recipe_list_no_recipes),
-                        style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .padding(Dimens.spacing_medium)
-                    )
+                    EmptyState(onAddRecipeClick = { viewModel.onAddRecipeClicked() })
                 }
                 else -> {
                     LazyColumn(
@@ -191,6 +188,7 @@ fun RecipeListScreen(
     }
 
     if (showUrlDialog) {
+        val emptyUrlMessage = stringResource(id = R.string.recipe_list_empty_url)
         AlertDialog(
             onDismissRequest = { showUrlDialog = false },
             title = { Text(stringResource(id = R.string.recipe_list_import_dialog_title)) },
@@ -212,7 +210,8 @@ fun RecipeListScreen(
                             showUrlDialog = false
                             urlInput = TextFieldValue("")
                         } else {
-                            Toast.makeText(context, R.string.recipe_list_empty_url, Toast.LENGTH_SHORT).show()                        }
+                            scope.launch { snackbarHostState.showSnackbar(emptyUrlMessage) }
+                        }
                     }
                 ) {
                     Text(stringResource(id = R.string.recipe_list_import_button))
@@ -227,6 +226,43 @@ fun RecipeListScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+fun EmptyState(modifier: Modifier = Modifier, onAddRecipeClick: () -> Unit) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = Dimens.spacing_extra_large),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            painter = painterResource(id = R.drawable.ic_launcher_background), // Replace with a more appropriate icon
+            contentDescription = null,
+            modifier = Modifier.size(Dimens.empty_state_icon_size),
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+        )
+        Spacer(modifier = Modifier.height(Dimens.spacing_large))
+        Text(
+            text = "Your Recipe Book is Empty",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(modifier = Modifier.height(Dimens.spacing_small))
+        Text(
+            text = "Let's add your first recipe! You can create one from scratch or import one from a URL.",
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(Dimens.spacing_extra_large))
+        Button(onClick = onAddRecipeClick) {
+            Icon(imageVector = Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(Dimens.spacing_small))
+            Text("Add Your First Recipe")
+        }
     }
 }
 
@@ -280,6 +316,14 @@ fun RecipeListItem(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Recipe List - Empty")
+@Composable
+fun RecipeListScreenEmptyPreview() {
+    MaterialTheme {
+        EmptyState(onAddRecipeClick = {})
     }
 }
 

@@ -19,10 +19,12 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
+data class UserMessage(val id: Long, val message: String, val recipe: Recipe? = null)
+
 data class RecipeListUiState(
     val recipes: List<Recipe> = emptyList(),
     val isLoading: Boolean = true,
-    val errorMessage: String? = null,
+    val userMessage: UserMessage? = null,
 )
 
 @HiltViewModel
@@ -37,10 +39,11 @@ class RecipeListViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             recipeRepository.getAllRecipes()
-                .onStart { _uiState.update { it.copy(isLoading = true, errorMessage = null) } }
+                .onStart { _uiState.update { it.copy(isLoading = true, userMessage = null) } }
                 .catch { exception ->
                     Log.e("RecipeListVM", "Error collecting recipes", exception)
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "Error: ${exception.message}") }
+                    val message = UserMessage(id = System.nanoTime(), message = "Error: ${exception.message}")
+                    _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 .collect { recipeList ->
                     Log.d("RecipeListVM", "Snapshot received. Recipe count: ${recipeList.size}")
@@ -51,14 +54,11 @@ class RecipeListViewModel @Inject constructor(
 
     // --- Navigation Events --- //
     fun onRecipeSelected(recipeId: String) {
-        // Corrected from navigateTo to just navigate if that's the name in your service
         navigationService.navigate(Screen.RecipeDetail.createRoute(recipeId))
     }
 
     fun onAddRecipeClicked() {
-        // FIX: The AddRecipe route now requires an ID, even if it's for a new recipe.
-        // We pass "new" or a similar keyword to signify a new recipe.
-        navigationService.navigate(Screen.AddRecipe.createRoute("new"))
+        navigationService.navigate(Screen.AddRecipe.createRoute(null))
     }
 
     fun onImportRecipeClicked(url: String) {
@@ -66,7 +66,8 @@ class RecipeListViewModel @Inject constructor(
             val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
             navigationService.navigate(Screen.ImportRecipe.createRoute(encodedUrl))
         } catch (e: Exception) {
-            _uiState.update { it.copy(errorMessage = "Invalid URL format.") }
+            val message = UserMessage(id = System.nanoTime(), message = "Invalid URL format.")
+            _uiState.update { it.copy(userMessage = message) }
         }
     }
 
@@ -75,33 +76,37 @@ class RecipeListViewModel @Inject constructor(
     }
 
     fun onLogoutClicked() {
-        // FIX: Renamed navigateAndPopUpTo to navigateAndPopUp
+        // You should ideally handle the actual Firebase logout here
         navigationService.navigateAndPopUp(Screen.Login.route, Screen.MealList.route)
     }
 
     // --- Data Events --- //
     fun deleteRecipe(recipe: Recipe) {
-        if (recipe.id.isBlank()) {
-            _uiState.update { it.copy(errorMessage = "Error: Recipe ID is missing.") }
-            return
-        }
         viewModelScope.launch {
-            // Your RecipeRepository's deleteRecipe probably doesn't return a Result anymore
-            // since it throws an exception on failure. We'll wrap it in a try-catch.
-            try {
-                recipeRepository.deleteRecipe(recipe.id)
-                // FIX: Corrected the typo here
-                Log.i("RecipeListVM", "Recipe delete request sent for: ${recipe.id}")
-                // The realtime listener will update the list, but we can show a temporary message.
-                _uiState.update { it.copy(errorMessage = "${recipe.title} deleted") }
-            } catch (e: Exception) {
-                Log.e("RecipeListVM", "Error deleting recipe: ${recipe.id}", e)
-                _uiState.update { ui -> ui.copy(errorMessage = "Failed to delete ${recipe.title}: ${e.message}") }
+            recipeRepository.deleteRecipe(recipe.id).onSuccess {
+                val message = UserMessage(
+                    id = System.nanoTime(),
+                    message = "'${recipe.title}' deleted.",
+                    recipe = recipe
+                )
+                _uiState.update { it.copy(userMessage = message) }
+            }.onFailure {
+                val message = UserMessage(id = System.nanoTime(), message = "Failed to delete '${recipe.title}'.")
+                _uiState.update { it.copy(userMessage = message) }
             }
         }
     }
 
-    fun clearErrorMessage() {
-        _uiState.update { it.copy(errorMessage = null) }
+    fun undoDelete(recipe: Recipe) {
+        viewModelScope.launch {
+            recipeRepository.saveRecipe(recipe).onFailure {
+                val message = UserMessage(id = System.nanoTime(), message = "Failed to restore '${recipe.title}'.")
+                _uiState.update { it.copy(userMessage = message) }
+            }
+        }
+    }
+
+    fun userMessageShown() {
+        _uiState.update { it.copy(userMessage = null) }
     }
 }

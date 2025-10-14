@@ -5,6 +5,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -61,6 +64,7 @@ fun RecipeListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    val lazyListState = rememberLazyListState()
 
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlInput by remember { mutableStateOf(TextFieldValue("")) }
@@ -82,6 +86,14 @@ fun RecipeListScreen(
             viewModel.userMessageShown()
         }
     }
+
+    // FAB animation state
+    val expandedFab by remember {
+        derivedStateOf { lazyListState.firstVisibleItemIndex == 0 || !lazyListState.isScrollInProgress }
+    }
+    val fabInteractionSource = remember { MutableInteractionSource() }
+    val isFabPressed by fabInteractionSource.collectIsPressedAsState()
+    val fabScale by animateFloatAsState(targetValue = if (isFabPressed) 0.9f else 1f, label = "fab_scale")
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -113,17 +125,17 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { viewModel.onAddRecipeClicked() },
                 shape = RoundedCornerShape(Dimens.fab_corner_radius),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Add,
-                    contentDescription = stringResource(id = R.string.recipe_list_add_new_recipe)
-                )
-            }
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                expanded = expandedFab,
+                icon = { Icon(Icons.Filled.Add, stringResource(R.string.add_recipe_add_new_recipe_title)) },
+                text = { Text(stringResource(R.string.add_recipe_add_new_recipe_title)) },
+                modifier = Modifier.scale(fabScale),
+                interactionSource = fabInteractionSource
+            )
         }
     ) { paddingValues ->
         Box(
@@ -140,6 +152,7 @@ fun RecipeListScreen(
                 }
                 else -> {
                     LazyColumn(
+                        state = lazyListState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_small),
                         verticalArrangement = Arrangement.spacedBy(Dimens.spacing_large)

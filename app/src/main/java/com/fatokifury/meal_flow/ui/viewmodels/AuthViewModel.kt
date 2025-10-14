@@ -48,6 +48,7 @@ class AuthViewModel @Inject constructor(
     fun navigateToLogin() = navigationService.navigateAndPopUp(Screen.Login.route, Screen.SignUp.route)
     fun navigateToSignUp() = navigationService.navigateAndPopUp(Screen.SignUp.route, Screen.Login.route)
 
+
     // --- Login Logic --- //
     fun onLoginEmailChange(email: String) {
         _loginUiState.update { it.copy(email = email) }

@@ -2,9 +2,22 @@ package com.fatokifury.meal_flow.ui.screens
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -28,6 +42,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
@@ -44,9 +59,11 @@ fun RecipeListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlInput by remember { mutableStateOf(TextFieldValue("")) }
+    val undoActionLabel = stringResource(R.string.undo)
 
     // Listen for user messages from the ViewModel
     LaunchedEffect(uiState.userMessage) {
@@ -54,7 +71,7 @@ fun RecipeListScreen(
             scope.launch {
                 val result = snackbarHostState.showSnackbar(
                     message = userMessage.message,
-                    actionLabel = if (userMessage.recipe != null) "Undo" else null,
+                    actionLabel = if (userMessage.recipe != null) undoActionLabel else null,
                     duration = SnackbarDuration.Short
                 )
                 if (result == SnackbarResult.ActionPerformed) {
@@ -66,6 +83,7 @@ fun RecipeListScreen(
     }
 
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
@@ -86,18 +104,17 @@ fun RecipeListScreen(
                     IconButton(onClick = { viewModel.onLogoutClicked() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Logout"
+                            contentDescription = stringResource(R.string.logout)
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+                scrollBehavior = scrollBehavior
             )
         },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.onAddRecipeClicked() },
+                shape = RoundedCornerShape(Dimens.fab_corner_radius),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) {
@@ -124,7 +141,7 @@ fun RecipeListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_small),
-                        verticalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
+                        verticalArrangement = Arrangement.spacedBy(Dimens.spacing_large)
                     ) {                        items(uiState.recipes, key = { recipe -> recipe.id }) { recipe ->
                             val dismissBoxState = rememberSwipeToDismissBoxState(
                                 confirmValueChange = {
@@ -246,13 +263,13 @@ fun EmptyState(modifier: Modifier = Modifier, onAddRecipeClick: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(Dimens.spacing_large))
         Text(
-            text = "Your Recipe Book is Empty",
+            text = stringResource(R.string.empty_state_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold
         )
         Spacer(modifier = Modifier.height(Dimens.spacing_small))
         Text(
-            text = "Let's add your first recipe! You can create one from scratch or import one from a URL.",
+            text = stringResource(R.string.empty_state_description),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -261,7 +278,7 @@ fun EmptyState(modifier: Modifier = Modifier, onAddRecipeClick: () -> Unit) {
         Button(onClick = onAddRecipeClick) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(Dimens.spacing_small))
-            Text("Add Your First Recipe")
+            Text(stringResource(R.string.empty_state_add_first))
         }
     }
 }
@@ -271,13 +288,15 @@ fun RecipeListItem(
     recipe: Recipe,
     onClick: () -> Unit
 ) {
-    ElevatedCard(
+    val isDarkTheme = isSystemInDarkTheme()
+    Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-        )
+        shape = RoundedCornerShape(Dimens.card_corner_radius),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDarkTheme) 1.dp else 2.dp),
+        border = if (isDarkTheme) BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)) else null,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Row(
             modifier = Modifier.padding(Dimens.spacing_medium),

@@ -38,6 +38,7 @@ val surfaceContainerLight = Color(0xFFF4EDDF)
 val surfaceContainerHighLight = Color(0xFFEEE8DA)
 val surfaceContainerHighestLight = Color(0xFFE8E2D4)
 
+// Dark Theme Colors
 val primaryDark = Color(0xFFDBC66E)
 val onPrimaryDark = Color(0xFF3A3000)
 val primaryContainerDark = Color(0xFF534600)
@@ -54,10 +55,13 @@ val errorDark = Color(0xFFFFB4AB)
 val onErrorDark = Color(0xFF690005)
 val errorContainerDark = Color(0xFF93000A)
 val onErrorContainerDark = Color(0xFFFFDAD6)
-val backgroundDark = Color(0xFF15130B)
+
+// Rich espresso background for dark mode
+val backgroundDark = Color(0xFF1C140D)
 val onBackgroundDark = Color(0xFFE8E2D4)
-val surfaceDark = Color(0xFF15130B)
+val surfaceDark = Color(0xFF1C140D)
 val onSurfaceDark = Color(0xFFE8E2D4)
+
 val surfaceVariantDark = Color(0xFF4B4739)
 val onSurfaceVariantDark = Color(0xFFCDC6B4)
 val outlineDark = Color(0xFF969080)
@@ -66,13 +70,15 @@ val scrimDark = Color(0xFF000000)
 val inverseSurfaceDark = Color(0xFFE8E2D4)
 val inverseOnSurfaceDark = Color(0xFF333027)
 val inversePrimaryDark = Color(0xFF6D5E0F)
-val surfaceDimDark = Color(0xFF15130B)
-val surfaceBrightDark = Color(0xFF3C3930)
-val surfaceContainerLowestDark = Color(0xFF100E07)
-val surfaceContainerLowDark = Color(0xFF1E1B13)
-val surfaceContainerDark = Color(0xFF222017)
-val surfaceContainerHighDark = Color(0xFF2D2A21)
-val surfaceContainerHighestDark = Color(0xFF38352B)
+
+// Adjusted surface containers based on the new espresso background
+val surfaceDimDark = Color(0xFF1C140D)      // Same as new background
+val surfaceBrightDark = Color(0xFF453B33)     // A slightly lighter brown
+val surfaceContainerLowestDark = Color(0xFF170F09) // Slightly darker than background
+val surfaceContainerLowDark = Color(0xFF251C15)    // A bit lighter
+val surfaceContainerDark = Color(0xFF2A211A)      // A bit lighter still
+val surfaceContainerHighDark = Color(0xFF352B24)   // Getting lighter
+val surfaceContainerHighestDark = Color(0xFF40362E) // Lightest brown surface container
 
 val customColor1Light = Color(0xFF904B3D)
 val onCustomColor1Light = Color(0xFFFFFFFF)

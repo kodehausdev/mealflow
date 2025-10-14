@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
@@ -300,8 +301,7 @@ fun RecipeListItem(
     ) {
         Row(
             modifier = Modifier.padding(Dimens.spacing_medium),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
+            verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
                 model = recipe.imageUrl,
@@ -314,29 +314,55 @@ fun RecipeListItem(
                 error = painterResource(id = R.drawable.ic_launcher_background)
             )
 
+            Spacer(modifier = Modifier.width(Dimens.spacing_medium))
+
             Column(Modifier.weight(1f)) {
                 Text(
                     text = recipe.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = Dimens.font_size_large),
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 if (recipe.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(Dimens.spacing_extra_small))
                     Text(
                         text = recipe.description,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = Dimens.spacing_extra_small)
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                if (recipe.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Text(
+                            text = recipe.tags.first(),
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
             }
+
+            Spacer(modifier = Modifier.width(Dimens.spacing_small))
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
     }
 }
+
 
 @Preview(showBackground = true, name = "Recipe List - Empty")
 @Composable

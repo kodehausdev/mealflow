@@ -25,12 +25,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,6 +39,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -63,8 +64,9 @@ fun RecipeListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
     val lazyListState = rememberLazyListState()
+    val context = LocalContext.current
 
     var showUrlDialog by remember { mutableStateOf(false) }
     var urlInput by remember { mutableStateOf(TextFieldValue("")) }
@@ -89,7 +91,7 @@ fun RecipeListScreen(
 
     // FAB animation state
     val expandedFab by remember {
-        derivedStateOf { lazyListState.firstVisibleItemIndex == 0 || !lazyListState.isScrollInProgress }
+        derivedStateOf { lazyListState.firstVisibleItemIndex == 0 }
     }
     val fabInteractionSource = remember { MutableInteractionSource() }
     val isFabPressed by fabInteractionSource.collectIsPressedAsState()
@@ -99,26 +101,41 @@ fun RecipeListScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text(stringResource(id = R.string.recipe_list_my_recipes_title), style = MaterialTheme.typography.titleLarge) },
+            LargeTopAppBar(
+                title = {
+                    Column {
+                        Text(stringResource(id = R.string.recipe_list_my_recipes_title))
+                        Text(
+                            text = context.resources.getQuantityString(
+                                R.plurals.recipe_count_subtitle,
+                                uiState.recipes.size,
+                                uiState.recipes.size
+                            ),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
                 actions = {
-                    IconButton(onClick = { showUrlDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Filled.Link,
-                            contentDescription = stringResource(id = R.string.recipe_list_import_from_url)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.onMealCalendarClicked() }) {
-                        Icon(
-                            imageVector = Icons.Filled.CalendarMonth,
-                            contentDescription = stringResource(id = R.string.recipe_list_open_meal_calendar)
-                        )
-                    }
-                    IconButton(onClick = { viewModel.onLogoutClicked() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = stringResource(R.string.logout)
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small)) {
+                        IconButton(onClick = { showUrlDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Link,
+                                contentDescription = stringResource(id = R.string.recipe_list_import_from_url)
+                            )
+                        }
+                        IconButton(onClick = { viewModel.onMealCalendarClicked() }) {
+                            Icon(
+                                imageVector = Icons.Rounded.CalendarToday,
+                                contentDescription = stringResource(id = R.string.recipe_list_open_meal_calendar)
+                            )
+                        }
+                        IconButton(onClick = { viewModel.onLogoutClicked() }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Logout,
+                                contentDescription = stringResource(R.string.logout)
+                            )
+                        }
                     }
                 },
                 scrollBehavior = scrollBehavior
@@ -131,8 +148,8 @@ fun RecipeListScreen(
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 expanded = expandedFab,
-                icon = { Icon(Icons.Filled.Add, stringResource(R.string.add_recipe_add_new_recipe_title)) },
-                text = { Text(stringResource(R.string.add_recipe_add_new_recipe_title)) },
+                icon = { Icon(Icons.Filled.Add, stringResource(id = R.string.add_recipe_fab_text)) },
+                text = { Text(stringResource(id = R.string.add_recipe_fab_text)) },
                 modifier = Modifier.scale(fabScale),
                 interactionSource = fabInteractionSource
             )

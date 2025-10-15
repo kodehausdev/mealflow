@@ -3,13 +3,11 @@ package com.fatokifury.meal_flow.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -28,7 +26,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,7 +45,6 @@ import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
 import com.fatokifury.meal_flow.model.Recipe
 import com.fatokifury.meal_flow.ui.theme.Dimens
-import com.fatokifury.meal_flow.ui.theme.MealFlowTheme
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeListViewModel
 import kotlinx.coroutines.launch
 
@@ -59,8 +55,15 @@ private enum class ViewType {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun RecipeListScreen(
-    viewModel: RecipeListViewModel = hiltViewModel()
+    viewModel: RecipeListViewModel = hiltViewModel(),
+    onlogout: () -> Unit
 ) {
+//    // --- START OF TEMPORARY CODE ---
+//    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+//        Text("Recipe List Screen reached successfully!")
+//    }
+//    // --
+//}
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -132,8 +135,7 @@ fun RecipeListScreen(
                                 contentDescription = stringResource(id = R.string.recipe_list_import_from_url)
                             )
                         }
-                        IconButton(onClick = { viewModel.onMealCalendarClicked() }) {
-                            Icon(
+                        IconButton(onClick = onlogout) {                            Icon(
                                 imageVector = Icons.Rounded.CalendarToday,
                                 contentDescription = stringResource(id = R.string.recipe_list_open_meal_calendar)
                             )
@@ -144,6 +146,7 @@ fun RecipeListScreen(
                                 contentDescription = stringResource(R.string.logout)
                             )
                         }
+
                     }
                 },
                 scrollBehavior = scrollBehavior
@@ -406,7 +409,10 @@ private fun RecipeListView(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_small),
+        contentPadding = PaddingValues(
+            horizontal = Dimens.spacing_medium,
+            vertical = Dimens.spacing_small
+        ),
         verticalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
     ) {
         items(recipes, key = { it.id }) { recipe ->
@@ -418,6 +424,7 @@ private fun RecipeListView(
                     } else false
                 }
             )
+
 
             SwipeToDismissBox(
                 modifier = Modifier.animateItemPlacement(),
@@ -432,6 +439,7 @@ private fun RecipeListView(
                         },
                         label = "dismiss_bg_color"
                     )
+
 
                     val alignment = when (dismissBoxState.dismissDirection) {
                         SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
@@ -521,8 +529,8 @@ fun EnhancedRecipeListItem(
                     contentDescription = recipe.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(id = R.drawable.placeholder_food),
-                    error = painterResource(id = R.drawable.placeholder_food)
+                    placeholder = painterResource(id = R.drawable.ic_restaurant),
+                    error = painterResource(id = R.drawable.ic_restaurant)
                 )
             }
 

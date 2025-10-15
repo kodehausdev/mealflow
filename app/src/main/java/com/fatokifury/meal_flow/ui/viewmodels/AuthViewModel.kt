@@ -10,6 +10,7 @@ import com.fatokifury.meal_flow.navigation.NavigationService
 import com.fatokifury.meal_flow.navigation.Screen
 import com.fatokifury.meal_flow.ui.screens.LoginUiState
 import com.fatokifury.meal_flow.ui.screens.SignUpUiState
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -29,7 +30,8 @@ sealed class AuthResultEvent {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val navigationService: NavigationService,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _loginUiState = MutableStateFlow(LoginUiState())
@@ -80,6 +82,13 @@ class AuthViewModel @Inject constructor(
             _loginUiState.update { it.copy(isLoading = false) }
         }
     }
+    // Make sure you have injected FirebaseAuth and NavigationService in the constructor
+    fun onLogoutClicked() {
+        auth.signOut() // Signs the user out from Firebase. [1, 2]
+        // Navigate to Login and pop everything up to MealList off the back stack
+        navigationService.navigateAndPopUp(Screen.Login.route, Screen.MealList.route)
+    }
+
 
     // --- Sign Up Logic (Upgraded) --- //
 

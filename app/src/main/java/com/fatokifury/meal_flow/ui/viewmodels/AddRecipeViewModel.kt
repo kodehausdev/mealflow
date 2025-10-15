@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 data class AddRecipeUiState(
     val recipeId: String? = null,
@@ -65,7 +66,7 @@ class AddRecipeViewModel @Inject constructor(
                         ingredients = recipe.ingredients,
                         steps = recipe.steps,
                         tags = recipe.tags,
-                        selectedImageUri = recipe.imageUrl?.let { Uri.parse(it) },
+                        selectedImageUri = recipe.imageUrl?.toUri(),
                         isLoading = false
                     )
                 }

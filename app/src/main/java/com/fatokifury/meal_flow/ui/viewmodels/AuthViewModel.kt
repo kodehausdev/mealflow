@@ -65,7 +65,7 @@ class AuthViewModel @Inject constructor(
     fun loginUser() {
         val state = _loginUiState.value
         if (!validateEmail(state.email) || state.pass.isEmpty()) {
-            // Optionally send an error event
+            _loginUiState.update { it.copy(isEmailError = !validateEmail(state.email)) }
             return
         }
         viewModelScope.launch {

@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Link
@@ -142,7 +144,7 @@ fun RecipeListScreen(
                         }
                         IconButton(onClick = { viewModel.onLogoutClicked() }) {
                             Icon(
-                                imageVector = Icons.Rounded.Logout,
+                                imageVector = Icons.AutoMirrored.Rounded.Logout,
                                 contentDescription = stringResource(R.string.logout)
                             )
                         }
@@ -265,7 +267,7 @@ private fun RecipeListContent(
                 checked = viewType == ViewType.GRID,
                 onCheckedChange = { onViewTypeChange(if (it) ViewType.GRID else ViewType.LIST) }) {
                 Icon(
-                    if (viewType == ViewType.GRID) Icons.Default.ViewList else Icons.Default.GridView,
+                    if (viewType == ViewType.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                     contentDescription = "Toggle view"
                 )
             }

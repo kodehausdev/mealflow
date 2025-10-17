@@ -6,10 +6,9 @@ import com.fatokifury.meal_flow.data.RecipeRepository
 import com.fatokifury.meal_flow.data.RecipeRepositoryImpl
 import com.fatokifury.meal_flow.navigation.NavigationService
 import com.fatokifury.meal_flow.navigation.NavigationServiceImpl
-import com.google.firebase.auth.FirebaseAuth // <-- Import this
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -17,9 +16,29 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+// --- MODULE 1: For providing concrete instances (@Provides) ---
 @Module
 @InstallIn(SingletonComponent::class)
-abstract class AppModule {
+object ProvidesModule { // Changed name to avoid confusion
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+}
+
+
+// --- MODULE 2: For binding interfaces to implementations (@Binds) ---
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class BindsModule { // Changed name to avoid confusion
 
     @Binds
     @Singleton
@@ -32,17 +51,4 @@ abstract class AppModule {
     @Binds
     @Singleton
     abstract fun bindNavigationService(impl: NavigationServiceImpl): NavigationService
-
-    companion object {
-
-        // V-- THIS IS THE FIX --V
-        @Provides
-        @Singleton
-        fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
-        // ^-- THIS IS THE FIX --^
-
-        @Provides
-        @Singleton
-        fun provideFirebaseFirestore(): FirebaseFirestore = Firebase.firestore
-    }
 }

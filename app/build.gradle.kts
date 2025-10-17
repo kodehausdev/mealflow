@@ -116,6 +116,8 @@ dependencies {
     // ========== FIREBASE ==========
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
+    implementation(libs.firebase.storage.ktx)
+
 
     // ========== COROUTINES ==========
     implementation(libs.bundles.kotlinxCoroutines)

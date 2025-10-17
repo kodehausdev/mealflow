@@ -137,7 +137,8 @@ fun RecipeListScreen(
                                 contentDescription = stringResource(id = R.string.recipe_list_import_from_url)
                             )
                         }
-                        IconButton(onClick = onlogout) {                            Icon(
+                        IconButton(onClick = {viewModel.onMealCalendarClicked()} ) {
+                            Icon(
                                 imageVector = Icons.Rounded.CalendarToday,
                                 contentDescription = stringResource(id = R.string.recipe_list_open_meal_calendar)
                             )
@@ -593,8 +594,8 @@ fun RecipeGridItem(
                     contentDescription = recipe.title,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
-                    placeholder = painterResource(id = R.drawable.placeholder_food),
-                    error = painterResource(id = R.drawable.placeholder_food)
+                    placeholder = painterResource(id = R.drawable.ic_restaurant),
+                    error = painterResource(id = R.drawable.ic_restaurant)
                 )
 
                 // Gradient overlay for better text readability

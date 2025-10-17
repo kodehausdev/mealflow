@@ -106,8 +106,8 @@ fun RecipeDetailScreen(
                                 .fillMaxWidth()
                                 .height(Dimens.hero_image_height),
                             contentScale = ContentScale.Crop,
-                            placeholder = painterResource(id = R.drawable.ic_launcher_background),
-                            error = painterResource(id = R.drawable.ic_launcher_background)
+                            placeholder = painterResource(id = R.drawable.ic_restaurant),
+                            error = painterResource(id = R.drawable.ic_restaurant)
                         )
                     }
 

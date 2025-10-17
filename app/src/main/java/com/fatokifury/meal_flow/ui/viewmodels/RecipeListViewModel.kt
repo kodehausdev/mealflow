@@ -49,6 +49,7 @@ class RecipeListViewModel @Inject constructor(
                     Log.d("RecipeListVM", "Snapshot received. Recipe count: ${recipeList.size}")
                     _uiState.update { it.copy(recipes = recipeList, isLoading = false) }
                 }
+
         }
     }
 

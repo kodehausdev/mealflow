@@ -50,6 +50,7 @@ androidx-core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "co
 compose-calendar-view = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "composeCalendarView" }
 
 # Networking
+firebase-storage-ktx = { module = "com.google.firebase:firebase-storage-ktx" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }

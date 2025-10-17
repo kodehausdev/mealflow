@@ -76,19 +76,12 @@ fun AddRecipeScreen(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(uiState.saveSuccess) {
-        if (uiState.saveSuccess) {
-            Toast.makeText(context, R.string.add_recipe_saved_successfully, Toast.LENGTH_SHORT).show()
-            viewModel.onSaveSuccess()
+    // ADD THIS NEW BLOCK
+    LaunchedEffect(key1 = true) {
+        viewModel.toastMessage.collect { message ->Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
 
-    LaunchedEffect(uiState.errorMessage) {
-        uiState.errorMessage?.let {
-            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            viewModel.clearErrorMessage()
-        }
-    }
 
     Scaffold(
         topBar = {

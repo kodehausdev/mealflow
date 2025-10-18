@@ -22,6 +22,9 @@ sealed class Screen(val route: String) {
     data object AISuggestions : Screen("ai_suggestions_screen")
     data object MealCalendar : Screen("meal_calendar_screen")
 
+
+    data object AddRecipeByUrl : Screen("addRecipeByUrl")
+
     data object AddRecipe : Screen("add_recipe_screen?recipeId={recipeId}") {
         fun createRoute(recipeId: String?): String {
             return "add_recipe_screen?recipeId=${recipeId ?: "null"}"

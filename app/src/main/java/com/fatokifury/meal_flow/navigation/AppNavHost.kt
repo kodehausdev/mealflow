@@ -69,6 +69,11 @@ fun AppNavHost(
                 LoginScreen(authViewModel = authViewModel)
             }
 
+            composable(Screen.AddRecipeByUrl.route) {
+                AddRecipeByUrlScreen(navController = navController)
+            }
+
+
             composable(Screen.SignUp.route) {
                 SignUpScreen(authViewModel = authViewModel)
             }

@@ -107,6 +107,7 @@ dependencies {
     // ========== DEPENDENCY INJECTION ==========
     implementation(libs.bundles.hilt)
     implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.foundation)
     ksp(libs.hilt.android.compiler)
 
     // ========== DATABASE ==========

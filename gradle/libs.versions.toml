@@ -42,6 +42,7 @@ gemini = "0.9.0"
 benchmarkCommon = "1.4.1"
 volley = "1.2.1"
 cameraCore = "1.5.1"
+foundation = "1.9.3"
 
 [libraries]
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
@@ -115,6 +116,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 androidx-benchmark-common = { group = "androidx.benchmark", name = "benchmark-common", version.ref = "benchmarkCommon" }
 volley = { module = "com.android.volley:volley", version.ref = "volley" }
 androidx-camera-core = { group = "androidx.camera", name = "camera-core", version.ref = "cameraCore" }
+androidx-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundation" }
 
 [bundles]
 compose = [

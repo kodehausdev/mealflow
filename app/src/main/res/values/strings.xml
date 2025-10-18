@@ -100,5 +100,7 @@
     <string name="recipe_detail_steps_title">Steps</string>
     <string name="recipe_detail_tags_title">Tags</string>
     <string name="recipe_detail_could_not_load">Could not load recipe.</string>
+    <string name="empty_state_import_recipe">Import_Recipe</string>
+    <string name="add_recipe">"Add Recipe "</string>
 
 </resources>

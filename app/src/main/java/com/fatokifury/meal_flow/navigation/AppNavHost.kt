@@ -69,9 +69,9 @@ fun AppNavHost(
                 LoginScreen(authViewModel = authViewModel)
             }
 
-            composable(Screen.AddRecipeByUrl.route) {
-                AddRecipeByUrlScreen(navController = navController)
-            }
+//            composable(Screen.AddRecipeByUrl.route) {
+//                AddRecipeByUrlScreen(navController = navController)
+//            }
 
 
             composable(Screen.SignUp.route) {
@@ -100,15 +100,20 @@ fun AppNavHost(
             ) {
                 RecipeDetailScreen()
             }
-
+            // In AppNavHost.kt
             composable(
                 route = Screen.ImportRecipe.route,
+                // The arguments list MUST stay so NavController can pass it to the ViewModel
                 arguments = listOf(navArgument("url") {
                     type = NavType.StringType; nullable = true
                 })
             ) {
+                // Just call the screen. Hilt automatically creates the ViewModel
+                // and gives it the arguments from the NavController.
                 ImportRecipeScreen()
             }
+
+
         }
     } else {
         // If the destination isn't ready yet, show a loading indicator

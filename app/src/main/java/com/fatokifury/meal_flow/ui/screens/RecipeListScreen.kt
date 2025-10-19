@@ -464,6 +464,26 @@ private fun RecipeListView(
 }
 
 @Composable
+private fun RecipeTagChip(
+    tag: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(Dimens.spacing_small), // Use a small corner radius
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f), // A nice, subtle color
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+    ) {
+        Text(
+            text = tag,
+            style = MaterialTheme.typography.labelSmall, // Small, readable text
+            modifier = Modifier.padding(horizontal = Dimens.spacing_small, vertical = Dimens.spacing_extra_small)
+        )
+    }
+}
+
+
+@Composable
 private fun RecipeGridView(
     recipes: List<Recipe>,
     onRecipeClick: (Recipe) -> Unit,
@@ -485,10 +505,10 @@ private fun RecipeGridView(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class) // Add this Opt-in for FlowRow
 @Composable
 fun EnhancedRecipeListItem(
-    recipe: Recipe,
-    onClick: () -> Unit
+    recipe: Recipe,onClick: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
@@ -520,7 +540,11 @@ fun EnhancedRecipeListItem(
                 )
             }
 
-            Column(Modifier.weight(1f)) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(vertical = Dimens.spacing_extra_small) // Add some vertical padding
+            ) {
                 Text(
                     text = recipe.title,
                     style = MaterialTheme.typography.titleMedium,
@@ -539,6 +563,21 @@ fun EnhancedRecipeListItem(
                         modifier = Modifier.padding(top = Dimens.spacing_extra_small)
                     )
                 }
+
+                // --- START: Added Recipe Tags ---
+                if (recipe.tags.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small)) // Add space above tags
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.spacing_small)
+                    ) {
+                        // Show up to 4 tags to avoid cluttering the list item
+                        recipe.tags.take(4).forEach { tag ->
+                            RecipeTagChip(tag = tag)
+                        }
+                    }
+                }
+                // --- END: Added Recipe Tags ---
             }
 
             Icon(
@@ -549,6 +588,7 @@ fun EnhancedRecipeListItem(
         }
     }
 }
+
 
 @Composable
 fun RecipeGridItem(

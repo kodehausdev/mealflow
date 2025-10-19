@@ -1,7 +1,9 @@
 package com.fatokifury.meal_flow.ui.viewmodels
 
 import android.app.Application
-import androidx.lifecycle.ViewModel
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
@@ -9,6 +11,7 @@ import com.android.volley.toolbox.Volley
 import com.fatokifury.meal_flow.data.RecipeRepository
 import com.fatokifury.meal_flow.model.Recipe
 import com.fatokifury.meal_flow.navigation.NavigationService
+import com.fatokifury.meal_flow.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,140 +23,213 @@ import org.json.JSONObject
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
-import androidx.lifecycle.SavedStateHandle // Make sure this import is present
+
+private const val TAG = "ImportRecipeViewModel"
 
 data class ImportRecipeUiState(
     val isLoading: Boolean = false,
     val importUrl: String? = null,
     val errorMessage: String? = null,
-    val newRecipeId: String? = null
+    val newRecipeId: String? = null,
+    val debugInfo: String? = null
 )
 
 @HiltViewModel
 class ImportRecipeViewModel @Inject constructor(
+    application: Application,
     private val navigationService: NavigationService,
-    private val application: Application,
     private val recipeRepository: RecipeRepository,
-    private val savedStateHandle: SavedStateHandle // <-- ADD THIS
-) : ViewModel() {
+    private val savedStateHandle: SavedStateHandle
+) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ImportRecipeUiState())
     val uiState: StateFlow<ImportRecipeUiState> = _uiState.asStateFlow()
 
-    fun startImport() {
-        // 1. Get the encoded URL from the SavedStateHandle.
-        val encodedUrl: String? = savedStateHandle["encodedUrl"]
+    init {
+        val encodedUrl: String? = savedStateHandle["url"]
 
-        //2. NEW: Add a null check BEFORE the try-catch block.
-        // This is the real source of the problem. If the URL is null, we stop here.
         if (encodedUrl == null) {
             _uiState.update { it.copy(isLoading = false, errorMessage = "No URL was provided.") }
-            return
-        }
+        } else {
+            try {
+                val url = URLDecoder.decode(encodedUrl, StandardCharsets.UTF_8.toString())
+                _uiState.update { it.copy(isLoading = true, importUrl = url) }
 
-        // 3. Decode the non-null URL.
-        val url = try {
-            URLDecoder.decode(encodedUrl, StandardCharsets.UTF_8.toString())
-        } catch (e: Exception) {
-            // This catch block is now only for truly malformed URLs, not null ones.
-            _uiState.update { it.copy(isLoading = false, errorMessage = "The provided URL is invalid.") }
-            return
-        }
-
-        // 4. The rest of your original logic remains the same and is now reachable.
-        _uiState.update { it.copy(isLoading = true, importUrl = url, errorMessage = null, newRecipeId = null) }
-
-        val requestQueue = Volley.newRequestQueue(application)
-        val stringRequest = StringRequest(
-            Request.Method.GET, url,
-            { response -> parseHtmlAndSave(response) },
-            { error ->
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to fetch URL: ${error.message}") }
+                val requestQueue = Volley.newRequestQueue(getApplication())
+                val stringRequest = object : StringRequest(
+                    Method.GET, url,
+                    { response ->
+                        Log.d(TAG, "HTML Response received, length: ${response.length}")
+                        parseHtmlAndSave(response)
+                    },
+                    { error ->
+                        Log.e(TAG, "Volley Error: ${error.message}", error)
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = "Failed to fetch URL: ${error.message}"
+                            )
+                        }
+                    }
+                ) {
+                    override fun getHeaders(): MutableMap<String, String> {
+                        val headers = HashMap<String, String>()
+                        headers["User-Agent"] =
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"
+                        return headers
+                    }
+                }
+                requestQueue.add(stringRequest)
+            } catch (e: Exception) {
+                Log.e(TAG, "URL Decode Error: ${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "The provided URL is invalid."
+                    )
+                }
             }
-        )
-        requestQueue.add(stringRequest)
+        }
     }
-
-
 
     fun onNavigateBack() {
         navigationService.goBack()
     }
 
 
-
-    private fun parseHtmlAndSave(htmlContent: String) {    viewModelScope.launch {
-        try {
-            // 1. Create the recipe object from the HTML content.
-            val recipe = parseJsonLd(htmlContent)
-
-            // 2. The repository now handles the `createdBy` logic.
-            //    We no longer need to add it here.
-            val result = recipeRepository.saveRecipe(recipe)
-
-            result.onSuccess {
-                // 3. The 'recipe' object already contains the ID assigned by the repository.
-                //    Use recipe.id instead of 'it'.
-                _uiState.update { ui -> ui.copy(isLoading = false, newRecipeId = recipe.id) }
-
-            }.onFailure { exception ->
-                _uiState.update { ui -> ui.copy(isLoading = false, errorMessage = "Failed to save imported recipe: ${exception.message}") }
-            }
-        } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = "Failed to parse recipe data: ${e.message}") }
-        }
-    }
+    fun navigateToRecipe(recipeId: String) {
+        // Navigate to EDIT screen (AddRecipe) and pop the import screen
+        navigationService.navigateAndPopUp(
+            Screen.AddRecipe.createRoute(recipeId), // Destination
+            Screen.ImportRecipe.route              // Route to pop up to
+        )
     }
 
+    private fun parseHtmlAndSave(htmlContent: String) {
+        viewModelScope.launch {
+            try {
+                val recipe = parseJsonLd(htmlContent)
+                val result = recipeRepository.saveRecipe(recipe)
 
-    private fun parseJsonLd(htmlContent: String): Recipe {
-        val scriptTagStart = "<script type=\"application/ld+json\">"
-        val scriptTagEnd = "</script>"
-
-        var startIndex = 0
-        while (startIndex != -1) {
-            startIndex = htmlContent.indexOf(scriptTagStart, startIndex)
-            if (startIndex != -1) {
-                val endIndex = htmlContent.indexOf(scriptTagEnd, startIndex)
-                if (endIndex != -1) {
-                    val jsonLdContent = htmlContent.substring(startIndex + scriptTagStart.length, endIndex).trim()
-                    try {
-                        val jsonObject = JSONObject(jsonLdContent)
-                        val recipeObject = findRecipeObject(jsonObject)
-
-                        if (recipeObject != null) {
-                            val ingredients = recipeObject.optJSONArray("recipeIngredient")?.let { parseJsonArrayToStringList(it) } ?: emptyList()
-                            val instructions = recipeObject.optJSONArray("recipeInstructions")?.let { parseInstructionArray(it) } ?: emptyList()
-                            val imageUrl = parseImageUrl(recipeObject.opt("image"))
-
-                            return Recipe(
-                                title = recipeObject.optString("name", ""),
-                                description = recipeObject.optString("description", ""),
-                                imageUrl = imageUrl,
-                                ingredients = ingredients,
-                                steps = instructions
-                            )
-                        }
-                    } catch (e: Exception) {
-                        // Ignore parsing errors for this block and continue
+                result.onSuccess { newId ->
+                    Log.d(TAG, "Recipe saved successfully with ID: $newId")
+                    _uiState.update { ui -> ui.copy(isLoading = false, newRecipeId = newId) }
+                }.onFailure { exception ->
+                    Log.e(TAG, "Repository save failed: ${exception.message}", exception)
+                    _uiState.update { ui ->
+                        ui.copy(
+                            isLoading = false,
+                            errorMessage = "Failed to save imported recipe: ${exception.message}"
+                        )
                     }
-                    startIndex = endIndex
-                } else {
-                    startIndex = -1 // Malformed tag
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Parsing failed: ${e.message}", e)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Failed to parse recipe data: ${e.message}",
+                        debugInfo = e.stackTraceToString()
+                    )
                 }
             }
         }
-        throw Exception("No valid 'Recipe' object found in any JSON-LD script tag.")
+    }
+
+    private fun parseJsonLd(htmlContent: String): Recipe {
+        val patterns = listOf(
+            "<script type=\"application/ld+json\">" to "</script>",
+            "<script type='application/ld+json'>" to "</script>",
+            "<script type=application/ld+json>" to "</script>",
+            """<script[^>]*type\s*=\s*["\']?application/ld\+json["\']?[^>]*>""".toRegex() to "</script>"
+        )
+
+        var foundScripts = 0
+
+        for ((startPattern, endPattern) in patterns) {
+            var startIndex = 0
+
+            while (startIndex != -1) {
+                startIndex = when (startPattern) {
+                    is String -> htmlContent.indexOf(startPattern, startIndex)
+                    is Regex -> {
+                        val match = startPattern.find(htmlContent, startIndex)
+                        match?.range?.first ?: -1
+                    }
+                    else -> -1
+                }
+
+                if (startIndex != -1) {
+                    foundScripts++
+                    val scriptStart = when (startPattern) {
+                        is String -> startIndex + startPattern.length
+                        is Regex -> {
+                            val match = startPattern.find(htmlContent, startIndex)
+                            (match?.range?.last ?: startIndex) + 1
+                        }
+                        else -> startIndex
+                    }
+
+                    val endIndex = htmlContent.indexOf(endPattern, scriptStart)
+                    if (endIndex != -1) {
+                        val jsonLdContent = htmlContent.substring(scriptStart, endIndex).trim()
+
+                        Log.d(TAG, "Found JSON-LD script #$foundScripts (length: ${jsonLdContent.length})")
+                        Log.d(TAG, "Extracted JSON-LD (first 300 chars): ${jsonLdContent.take(300)}")
+
+                        try {
+                            val jsonObject = JSONObject(jsonLdContent)
+                            val recipeObject = findRecipeObject(jsonObject)
+
+                            if (recipeObject != null) {
+                                Log.d(TAG, "✓ Found Recipe object!")
+                                val ingredients =
+                                    recipeObject.optJSONArray("recipeIngredient")?.let { parseJsonArrayToStringList(it) } ?: emptyList()
+                                val instructions =
+                                    recipeObject.optJSONArray("recipeInstructions")?.let { parseInstructionArray(it) } ?: emptyList()
+                                val imageUrl = parseImageUrl(recipeObject.opt("image"))
+
+                                Log.d(TAG, "✓ Parsed recipe - Title: '${recipeObject.optString("name", "")}', Ingredients: ${ingredients.size}, Instructions: ${instructions.size}")
+
+                                return Recipe(
+                                    title = recipeObject.optString("name", "").ifBlank { "Untitled Recipe" },
+                                    description = recipeObject.optString("description", ""),
+                                    imageUrl = imageUrl,
+                                    ingredients = ingredients,
+                                    steps = instructions
+                                )
+                            } else {
+                                Log.w(TAG, "✗ No recipe object found in JSON-LD #$foundScripts (checking @type variations)")
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "✗ Error parsing JSON-LD script #$foundScripts: ${e.message}")
+                        }
+                        startIndex = endIndex
+                    } else {
+                        Log.w(TAG, "✗ Malformed JSON-LD script tag")
+                        startIndex = -1
+                    }
+                }
+            }
+        }
+
+        Log.e(TAG, "✗✗ No valid Recipe found after scanning $foundScripts JSON-LD scripts")
+        throw Exception("No valid 'Recipe' object found in any JSON-LD script tag. Found $foundScripts scripts but none contained a valid Recipe.")
     }
 
     private fun findRecipeObject(jsonObject: JSONObject): JSONObject? {
-        if (isRecipeType(jsonObject)) return jsonObject
+        if (isRecipeType(jsonObject)) {
+            Log.d(TAG, "Direct recipe type found")
+            return jsonObject
+        }
 
         val graph = jsonObject.optJSONArray("@graph")
         if (graph != null) {
+            Log.d(TAG, "Found @graph with ${graph.length()} items")
             for (i in 0 until graph.length()) {
                 val node = graph.optJSONObject(i)
                 if (node != null && isRecipeType(node)) {
+                    Log.d(TAG, "Found recipe in @graph at index $i")
                     return node
                 }
             }
@@ -162,26 +238,25 @@ class ImportRecipeViewModel @Inject constructor(
     }
 
     private fun isRecipeType(jsonObject: JSONObject): Boolean {
-        val type = jsonObject.opt("@type") ?: return false
-        when (type) {
-            is String -> return type == "Recipe"
+        return when (val type = jsonObject.opt("@type")) {
+            is String -> type == "Recipe"
             is JSONArray -> {
                 for (i in 0 until type.length()) {
                     if (type.optString(i) == "Recipe") return true
                 }
+                false
             }
+            else -> false
         }
-        return false
     }
 
     private fun parseImageUrl(imageNode: Any?): String? {
         val url = when (imageNode) {
-            is JSONObject -> imageNode.optString("url") // Use the version without a default value
-            is JSONArray -> if (imageNode.length() >0) parseImageUrl(imageNode.opt(0)) else null
+            is JSONObject -> imageNode.optString("url", null)
+            is JSONArray -> if (imageNode.length() > 0) parseImageUrl(imageNode.opt(0)) else null
             is String -> imageNode
             else -> null
         }
-        // Return null if the url is blank, otherwise return the url.
         return url?.ifBlank { null }
     }
 

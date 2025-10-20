@@ -91,6 +91,9 @@
     <string name="meal_calendar_title">Meal Calendar</string>
     <string name="meal_calendar_meals_for_date">Meals for: %1$s</string>
     <string name="meal_calendar_no_meals_planned">No meals planned for this day.</string>
+    <string name="delete_meal">Delete meal</string>
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
 
     <!-- RecipeDetailScreen -->
     <string name="recipe_detail_title">Recipe Details</string>

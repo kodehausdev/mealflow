@@ -4,14 +4,15 @@ import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 
 data class Recipe(
-    var id: String = "", // Made var to allow update after Firestore doc creation
+    var id: String = "",
     val title: String = "",
     val imageUrl: String? = null,
-    val description: String = "", // Optional: Add if you want a detailed description
-    val ingredients: List<String> = emptyList(),
+    val description: String = "",
+    val servings: Int = 1, // Base serving size
+    val ingredients: List<Ingredient> = emptyList(), // Use the new data class
     val steps: List<String> = emptyList(),
     val tags: List<String> = emptyList(),
-    val createdBy: String? = null, // To store the UID of the user who created it
+    val createdBy: String? = null,
     @ServerTimestamp
-    val createdAt: Date? = null // For sorting or tracking when it was added
+    val createdAt: Date? = null
 )

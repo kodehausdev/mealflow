@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import androidx.core.net.toUri
+import com.fatokifury.meal_flow.model.Ingredient
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -25,8 +25,11 @@ data class AddRecipeUiState(
     val recipeId: String? = null,
     val title: String = "",
     val description: String = "",
-    val ingredients: List<String> = emptyList(),
-    val currentIngredient: String = "",
+    val servings: String = "1",
+    val ingredients: List<Ingredient> = emptyList(),
+    val currentIngredientName: String = "",
+    val currentIngredientQuantity: String = "",
+    val currentIngredientUnit: String = "",
     val steps: List<String> = emptyList(),
     val currentStep: String = "",
     val selectedImageUri: Uri? = null,
@@ -51,10 +54,8 @@ class AddRecipeViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AddRecipeUiState())
     val uiState: StateFlow<AddRecipeUiState> = _uiState.asStateFlow()
 
-    // Add these two lines
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage: SharedFlow<String> = _toastMessage
-
 
     private val recipeId: String? = savedStateHandle["recipeId"]
 
@@ -74,10 +75,10 @@ class AddRecipeViewModel @Inject constructor(
                         recipeId = recipe.id,
                         title = recipe.title,
                         description = recipe.description,
+                        servings = recipe.servings.toString(),
                         ingredients = recipe.ingredients,
                         steps = recipe.steps,
                         tags = recipe.tags,
-                        selectedImageUri = recipe.imageUrl?.toUri(),
                         existingImageUrl = recipe.imageUrl,
                         isLoading = false
                     )
@@ -98,47 +99,67 @@ class AddRecipeViewModel @Inject constructor(
         _uiState.update { it.copy(description = newDescription) }
     }
 
-    fun onCurrentImageUrlChange(newUri: Uri?) {    // If a new image is selected (URI is not null)
-        newUri?.let { uri ->
-            try {
-                // Get the ContentResolver from the application context
-                val contentResolver = application.contentResolver
-
-                // Define the permission flags we need
-                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
-
-                // This is the crucial line:
-                // It tells the system "My app wants to keep access to this URI"
-                contentResolver.takePersistableUriPermission(uri, takeFlags)
-
-            } catch (e: SecurityException) {
-                // This can happen if the URI is from a provider that doesn't support
-                // persistable permissions. Log it for debugging.
-                e.printStackTrace()
-                // Optionally, you could emit a toast message here to inform the user.
-            }
-        }
-        // Finally, update the UI state with the URI
-        _uiState.update { it.copy(selectedImageUri = newUri) }
+    fun onServingsChange(newServings: String) {
+        _uiState.update { it.copy(servings = newServings) }
     }
 
+    fun onCurrentImageUrlChange(newUri: Uri?) {
+        newUri?.let { uri ->
+            try {
+                val contentResolver = application.contentResolver
+                val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                contentResolver.takePersistableUriPermission(uri, takeFlags)
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
+        }
+        _uiState.update { it.copy(selectedImageUri = newUri, existingImageUrl = null) }
+    }
 
-    fun onCurrentIngredientChange(newIngredient: String) {
-        _uiState.update { it.copy(currentIngredient = newIngredient) }
+    // --- Ingredient Handlers ---
+
+    fun onCurrentIngredientNameChange(newName: String) {
+        _uiState.update { it.copy(currentIngredientName = newName) }
+    }
+
+    fun onCurrentIngredientQuantityChange(newQuantity: String) {
+        _uiState.update { it.copy(currentIngredientQuantity = newQuantity) }
+    }
+
+    fun onCurrentIngredientUnitChange(newUnit: String) {
+        _uiState.update { it.copy(currentIngredientUnit = newUnit) }
     }
 
     fun addIngredient() {
-        val currentIngredient = _uiState.value.currentIngredient.trim()
-        if (currentIngredient.isNotBlank()) {
-            val updatedIngredients = _uiState.value.ingredients + currentIngredient
-            _uiState.update { it.copy(ingredients = updatedIngredients, currentIngredient = "") }
+        val state = _uiState.value
+        val name = state.currentIngredientName.trim()
+        val quantity = state.currentIngredientQuantity.trim().toDoubleOrNull()
+        val unit = state.currentIngredientUnit.trim()
+
+        if (name.isNotBlank() && quantity != null && quantity > 0) {
+            val newIngredient = Ingredient(name = name, quantity = quantity, unit = unit)
+            val updatedIngredients = state.ingredients + newIngredient
+            _uiState.update {
+                it.copy(
+                    ingredients = updatedIngredients,
+                    currentIngredientName = "",
+                    currentIngredientQuantity = "",
+                    currentIngredientUnit = ""
+                )
+            }
+        } else {
+            viewModelScope.launch {
+                _toastMessage.emit("Invalid ingredient details.")
+            }
         }
     }
 
-    fun removeIngredient(ingredient: String) {
+    fun removeIngredient(ingredient: Ingredient) {
         val updatedIngredients = _uiState.value.ingredients - ingredient
         _uiState.update { it.copy(ingredients = updatedIngredients) }
     }
+
+    // --- Step Handlers ---
 
     fun onCurrentStepChange(newStep: String) {
         _uiState.update { it.copy(currentStep = newStep) }
@@ -157,6 +178,8 @@ class AddRecipeViewModel @Inject constructor(
         _uiState.update { it.copy(steps = updatedSteps) }
     }
 
+    // --- Tag Handlers ---
+
     fun onCurrentTagChange(newTag: String) {
         _uiState.update { it.copy(currentTag = newTag) }
     }
@@ -174,9 +197,7 @@ class AddRecipeViewModel @Inject constructor(
         _uiState.update { it.copy(tags = updatedTags) }
     }
 
-
-// In AddRecipeViewModel.kt
-
+    // --- Save Logic ---
     fun saveRecipe() {
         viewModelScope.launch {
             val currentState = uiState.value
@@ -185,44 +206,51 @@ class AddRecipeViewModel @Inject constructor(
                 return@launch
             }
 
-            try {
-                // --- SIMPLIFIED LOGIC ---
-                // We will directly save the URI as a string.
-                // If a new image was picked, selectedImageUri will have a value.
-                // If editing without changing the image, existingImageUrl will be used.
-                val imageUrlToSave =
-                    currentState.selectedImageUri?.toString() ?: currentState.existingImageUrl
-
-                // Create the Recipe object with the URI string.
-                val recipeToSave = Recipe(
-                    id = currentState.recipeId ?: "",
-                    title = currentState.title,
-                    description = currentState.description,
-                    ingredients = currentState.ingredients,
-                    steps = currentState.steps,
-                    tags = currentState.tags,
-                    imageUrl = imageUrlToSave, // Use the URI string directly
-                    createdBy = auth.currentUser?.uid ?: ""
-                )
-
-                // Save the recipe object to Firestore.
-                val saveResult = recipeRepository.saveRecipe(recipeToSave)
-
-                saveResult.fold(
-                    onSuccess = { savedRecipeId ->
-                        _uiState.update { it.copy(recipeId = savedRecipeId) }
-                        _toastMessage.emit("Recipe saved successfully!")
-                        navigationService.goBack()
-                    },
-                    onFailure = {
-                        _toastMessage.emit("Error saving recipe: ${it.message}")
-                    }
-                )
-
-            } catch (e: Exception) {
-                _toastMessage.emit("An unexpected error occurred: ${e.message}")
+            val servings = currentState.servings.toIntOrNull()
+            if (servings == null || servings <= 0) {
+                _toastMessage.emit("Please enter a valid serving size.")
+                return@launch
             }
+
+            _uiState.update { it.copy(isSaving = true) }
+
+            val recipeIdToUse = currentState.recipeId ?: recipeRepository.getNewRecipeId()
+
+            val imageUrl = try {
+                currentState.selectedImageUri?.let {
+                    recipeRepository.uploadImage(it, recipeIdToUse, auth.currentUser?.uid ?: "unknown_user").getOrThrow()
+                } ?: currentState.existingImageUrl
+            } catch (e: Exception) {
+                _toastMessage.emit("Failed to upload image: ${e.message}")
+                _uiState.update { it.copy(isSaving = false) }
+                return@launch
+            }
+
+            val recipeToSave = Recipe(
+                id = recipeIdToUse,
+                title = currentState.title,
+                description = currentState.description,
+                servings = servings,
+                ingredients = currentState.ingredients,
+                steps = currentState.steps,
+                tags = currentState.tags,
+                imageUrl = imageUrl,
+                createdBy = auth.currentUser?.uid ?: ""
+            )
+
+            val saveResult = recipeRepository.saveRecipe(recipeToSave)
+
+            saveResult.fold(
+                onSuccess = { savedRecipeId ->
+                    _uiState.update { it.copy(isSaving = false, saveSuccess = true, recipeId = savedRecipeId) }
+                    _toastMessage.emit("Recipe saved successfully!")
+                    navigationService.goBack()
+                },
+                onFailure = { e ->
+                    _uiState.update { it.copy(isSaving = false) }
+                    _toastMessage.emit("Error saving recipe: ${e.message}")
+                }
+            )
         }
     }
 }
-

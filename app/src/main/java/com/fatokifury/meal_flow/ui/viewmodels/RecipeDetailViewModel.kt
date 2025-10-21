@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fatokifury.meal_flow.data.RecipeRepository
+import com.fatokifury.meal_flow.model.Ingredient
 import com.fatokifury.meal_flow.model.Recipe
 import com.fatokifury.meal_flow.navigation.NavigationService
 import com.fatokifury.meal_flow.navigation.Screen
@@ -16,8 +17,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class RecipeDetailUiState(
-    val recipe: Recipe? = null,
     val isLoading: Boolean = true,
+    val recipe: Recipe? = null,
+    val displayedServings: Int = 1, // Holds the user-selected serving size
     val errorMessage: String? = null
 )
 
@@ -38,24 +40,25 @@ class RecipeDetailViewModel @Inject constructor(
     }
 
     private fun loadRecipeDetails() {
-        if (recipeId == null || recipeId == "new") {_uiState.update { it.copy(isLoading = false, errorMessage = "Recipe ID not found.") }
+        if (recipeId == null || recipeId == "new") {
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Recipe ID not found.") }
             return
         }
 
         _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
         viewModelScope.launch {
-            // 1. Call the function and store the 'Result<Recipe>' object.
             val result: Result<Recipe> = recipeRepository.getRecipeById(recipeId)
 
-            // 2. Use the built-in 'onSuccess' and 'onFailure' handlers to unwrap the Result.
             result.onSuccess { recipe ->
-                // This code only runs if the result was a success.
-                // The 'recipe' variable here is the actual Recipe object.
-                _uiState.update { it.copy(recipe = recipe, isLoading = false) }
-
+                _uiState.update {
+                    it.copy(
+                        recipe = recipe,
+                        isLoading = false,
+                        displayedServings = recipe.servings
+                    )
+                }
             }.onFailure { exception ->
-                // This code only runs if the result was a failure.
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -66,19 +69,29 @@ class RecipeDetailViewModel @Inject constructor(
         }
     }
 
-
-        // These functions are now correctly defined at the class level.
-        fun onNavigateBack() {
-            navigationService.goBack()
-        }
-
-        fun onEditRecipeClicked() {
-            if (recipeId != null) {
-                navigationService.navigate(Screen.AddRecipe.createRoute(recipeId))
-            }
-        }
-
-        fun clearErrorMessage() {
-            _uiState.update { it.copy(errorMessage = null) }
+    fun onServingsChanged(newServings: Int) {
+        if (newServings > 0) {
+            _uiState.update { it.copy(displayedServings = newServings) }
         }
     }
+
+    fun getAdjustedIngredientQuantity(ingredient: Ingredient): Double {
+        val recipe = _uiState.value.recipe ?: return ingredient.quantity
+        if (recipe.servings == 0) return ingredient.quantity
+        return (ingredient.quantity / recipe.servings) * _uiState.value.displayedServings
+    }
+
+    fun onNavigateBack() {
+        navigationService.goBack()
+    }
+
+    fun onEditRecipeClicked() {
+        if (recipeId != null) {
+            navigationService.navigate(Screen.AddRecipe.createRoute(recipeId))
+        }
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+}

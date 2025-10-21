@@ -272,7 +272,7 @@ private fun RecipeListContent(
                 label = "view_type_animation",
                 transitionSpec = {
                     fadeIn(animationSpec = tween(220, delayMillis = 90))
-                        .with(fadeOut(animationSpec = tween(90)))
+                        .togetherWith(fadeOut(animationSpec = tween(90)))
                 }
             ) { targetViewType ->
                 when (targetViewType) {

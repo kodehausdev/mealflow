@@ -18,6 +18,7 @@ object Dimens {
     val icon_size_medium = 32.dp
     val icon_size_large = 48.dp // For Image Picker
     val empty_state_icon_size = 120.dp
+    val icon_button_size_small = 24.dp
 
     val text_field_height = 120.dp
     val card_padding_vertical = 4.dp

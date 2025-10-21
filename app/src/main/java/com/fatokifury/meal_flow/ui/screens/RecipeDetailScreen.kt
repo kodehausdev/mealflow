@@ -18,10 +18,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,12 +38,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
+import com.fatokifury.meal_flow.model.Ingredient
 import com.fatokifury.meal_flow.navigation.Screen
 import com.fatokifury.meal_flow.ui.theme.Dimens
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeDetailViewModel
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -77,7 +78,6 @@ fun RecipeDetailScreen(
             if (recipe != null) {
                 ExtendedFloatingActionButton(
                     onClick = {
-                        // Navigate with only the recipeId for a cleaner, more robust approach
                         viewModel.onEditRecipeClicked()
                         (Screen.AddRecipe.createRoute(recipe.id))
                     },
@@ -163,9 +163,16 @@ fun RecipeDetailScreen(
                                         icon = Icons.AutoMirrored.Filled.List
                                     )
                                     Spacer(modifier = Modifier.height(Dimens.spacing_small))
+                                    ServingSizeAdjuster(
+                                        currentServings = uiState.displayedServings,
+                                        onServingsChanged = viewModel::onServingsChanged
+                                    )
+                                    Spacer(modifier = Modifier.height(Dimens.spacing_medium))
                                     recipe.ingredients.forEach { ingredient ->
+                                        val adjustedQuantity = viewModel.getAdjustedIngredientQuantity(ingredient)
+                                        val formattedQuantity = String.format(Locale.getDefault(), "%.1f", adjustedQuantity).removeSuffix(".0")
                                         Text(
-                                            text = "• $ingredient",
+                                            text = "• $formattedQuantity ${ingredient.unit} ${ingredient.name}",
                                             style = MaterialTheme.typography.bodyLarge,
                                             modifier = Modifier.padding(vertical = Dimens.spacing_extra_small)
                                         )
@@ -239,6 +246,26 @@ fun RecipeDetailScreen(
 }
 
 @Composable
+private fun ServingSizeAdjuster(
+    currentServings: Int,
+    onServingsChanged: (Int) -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
+    ) {
+        Text(text = "Servings:", style = MaterialTheme.typography.titleMedium)
+        IconButton(onClick = { onServingsChanged(currentServings - 1) }) {
+            Icon(Icons.Default.Remove, contentDescription = "Decrease servings")
+        }
+        Text(text = currentServings.toString(), style = MaterialTheme.typography.titleMedium)
+        IconButton(onClick = { onServingsChanged(currentServings + 1) }) {
+            Icon(Icons.Default.Add, contentDescription = "Increase servings")
+        }
+    }
+}
+
+@Composable
 private fun SectionHeader(
     title: String,
     icon: ImageVector,
@@ -262,9 +289,9 @@ private fun SectionHeader(
         )
     }
 }
+
 @Preview(showBackground = true)
 @Composable
 fun RecipeDetailScreenPreview() {
-    // The preview now works without a NavController
     RecipeDetailScreen()
 }

@@ -5,10 +5,10 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
-import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.fatokifury.meal_flow.data.RecipeRepository
+import com.fatokifury.meal_flow.model.Ingredient
 import com.fatokifury.meal_flow.model.Recipe
 import com.fatokifury.meal_flow.navigation.NavigationService
 import com.fatokifury.meal_flow.navigation.Screen
@@ -96,12 +96,10 @@ class ImportRecipeViewModel @Inject constructor(
         navigationService.goBack()
     }
 
-
     fun navigateToRecipe(recipeId: String) {
-        // Navigate to EDIT screen (AddRecipe) and pop the import screen
         navigationService.navigateAndPopUp(
-            Screen.AddRecipe.createRoute(recipeId), // Destination
-            Screen.ImportRecipe.route              // Route to pop up to
+            Screen.AddRecipe.createRoute(recipeId),
+            Screen.ImportRecipe.route
         )
     }
 
@@ -156,6 +154,7 @@ class ImportRecipeViewModel @Inject constructor(
                         val match = startPattern.find(htmlContent, startIndex)
                         match?.range?.first ?: -1
                     }
+
                     else -> -1
                 }
 
@@ -167,6 +166,7 @@ class ImportRecipeViewModel @Inject constructor(
                             val match = startPattern.find(htmlContent, startIndex)
                             (match?.range?.last ?: startIndex) + 1
                         }
+
                         else -> startIndex
                     }
 
@@ -174,62 +174,60 @@ class ImportRecipeViewModel @Inject constructor(
                     if (endIndex != -1) {
                         val jsonLdContent = htmlContent.substring(scriptStart, endIndex).trim()
 
-                        Log.d(TAG, "Found JSON-LD script #$foundScripts (length: ${jsonLdContent.length})")
-                        Log.d(TAG, "Extracted JSON-LD (first 300 chars): ${jsonLdContent.take(300)}")
-
                         try {
                             val jsonObject = JSONObject(jsonLdContent)
                             val recipeObject = findRecipeObject(jsonObject)
 
                             if (recipeObject != null) {
-                                Log.d(TAG, "✓ Found Recipe object!")
-                                val ingredients =
-                                    recipeObject.optJSONArray("recipeIngredient")?.let { parseJsonArrayToStringList(it) } ?: emptyList()
-                                val instructions =
-                                    recipeObject.optJSONArray("recipeInstructions")?.let { parseInstructionArray(it) } ?: emptyList()
+                                val ingredients = recipeObject.optJSONArray("recipeIngredient")?.let { parseIngredients(it) } ?: emptyList()
+                                val instructions = recipeObject.optJSONArray("recipeInstructions")?.let { parseInstructionArray(it) } ?: emptyList()
                                 val imageUrl = parseImageUrl(recipeObject.opt("image"))
-
-                                Log.d(TAG, "✓ Parsed recipe - Title: '${recipeObject.optString("name", "")}', Ingredients: ${ingredients.size}, Instructions: ${instructions.size}")
+                                val servings = recipeObject.optString("recipeYield", "1").toIntOrNull() ?: 1
 
                                 return Recipe(
                                     title = recipeObject.optString("name", "").ifBlank { "Untitled Recipe" },
                                     description = recipeObject.optString("description", ""),
                                     imageUrl = imageUrl,
+                                    servings = servings,
                                     ingredients = ingredients,
                                     steps = instructions
                                 )
-                            } else {
-                                Log.w(TAG, "✗ No recipe object found in JSON-LD #$foundScripts (checking @type variations)")
                             }
                         } catch (e: Exception) {
                             Log.w(TAG, "✗ Error parsing JSON-LD script #$foundScripts: ${e.message}")
                         }
                         startIndex = endIndex
                     } else {
-                        Log.w(TAG, "✗ Malformed JSON-LD script tag")
                         startIndex = -1
                     }
                 }
             }
         }
 
-        Log.e(TAG, "✗✗ No valid Recipe found after scanning $foundScripts JSON-LD scripts")
-        throw Exception("No valid 'Recipe' object found in any JSON-LD script tag. Found $foundScripts scripts but none contained a valid Recipe.")
+        throw Exception("No valid 'Recipe' object found in any JSON-LD script tag.")
+    }
+
+    private fun parseIngredients(jsonArray: JSONArray): List<Ingredient> {
+        return (0 until jsonArray.length()).mapNotNull { i ->
+            val rawString = jsonArray.optString(i)
+            if (rawString.isNotBlank()) {
+                Ingredient(name = rawString, quantity = 1.0, unit = "unit")
+            } else {
+                null
+            }
+        }
     }
 
     private fun findRecipeObject(jsonObject: JSONObject): JSONObject? {
         if (isRecipeType(jsonObject)) {
-            Log.d(TAG, "Direct recipe type found")
             return jsonObject
         }
 
         val graph = jsonObject.optJSONArray("@graph")
         if (graph != null) {
-            Log.d(TAG, "Found @graph with ${graph.length()} items")
             for (i in 0 until graph.length()) {
                 val node = graph.optJSONObject(i)
                 if (node != null && isRecipeType(node)) {
-                    Log.d(TAG, "Found recipe in @graph at index $i")
                     return node
                 }
             }
@@ -251,17 +249,12 @@ class ImportRecipeViewModel @Inject constructor(
     }
 
     private fun parseImageUrl(imageNode: Any?): String? {
-        val url = when (imageNode) {
+        return when (imageNode) {
             is JSONObject -> imageNode.optString("url", null)
             is JSONArray -> if (imageNode.length() > 0) parseImageUrl(imageNode.opt(0)) else null
             is String -> imageNode
             else -> null
-        }
-        return url?.ifBlank { null }
-    }
-
-    private fun parseJsonArrayToStringList(jsonArray: JSONArray): List<String> {
-        return (0 until jsonArray.length()).map { jsonArray.getString(it) }
+        }?.ifBlank { null }
     }
 
     private fun parseInstructionArray(jsonArray: JSONArray): List<String> {

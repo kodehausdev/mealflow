@@ -113,7 +113,7 @@ class AddRecipeViewModel @Inject constructor(
                 e.printStackTrace()
             }
         }
-        _uiState.update { it.copy(selectedImageUri = newUri, existingImageUrl = null) }
+        _uiState.update { it.copy(selectedImageUri = newUri) }
     }
 
     // --- Ingredient Handlers ---
@@ -214,43 +214,45 @@ class AddRecipeViewModel @Inject constructor(
 
             _uiState.update { it.copy(isSaving = true) }
 
-            val recipeIdToUse = currentState.recipeId ?: recipeRepository.getNewRecipeId()
+            try {
+                val recipeIdToUse = currentState.recipeId ?: recipeRepository.getNewRecipeId()
 
-            val imageUrl = try {
-                currentState.selectedImageUri?.let {
-                    recipeRepository.uploadImage(it, recipeIdToUse, auth.currentUser?.uid ?: "unknown_user").getOrThrow()
-                } ?: currentState.existingImageUrl
+                // FIXED: Store the URI directly as a string (no Firebase upload)
+                // If a new image was selected, use selectedImageUri
+                // Otherwise, keep the existingImageUrl
+                val imageUrlToSave = currentState.selectedImageUri?.toString()
+                    ?: currentState.existingImageUrl
+
+                val recipeToSave = Recipe(
+                    id = recipeIdToUse,
+                    title = currentState.title,
+                    description = currentState.description,
+                    servings = servings,
+                    ingredients = currentState.ingredients,
+                    steps = currentState.steps,
+                    tags = currentState.tags,
+                    imageUrl = imageUrlToSave, // Save URI as string
+                    createdBy = auth.currentUser?.uid ?: ""
+                )
+
+                val saveResult = recipeRepository.saveRecipe(recipeToSave)
+
+                saveResult.fold(
+                    onSuccess = { savedRecipeId ->
+                        _uiState.update { it.copy(isSaving = false, saveSuccess = true, recipeId = savedRecipeId) }
+                        _toastMessage.emit("Recipe saved successfully!")
+                        navigationService.goBack()
+                    },
+                    onFailure = { e ->
+                        _uiState.update { it.copy(isSaving = false) }
+                        _toastMessage.emit("Error saving recipe: ${e.message}")
+                    }
+                )
+
             } catch (e: Exception) {
-                _toastMessage.emit("Failed to upload image: ${e.message}")
                 _uiState.update { it.copy(isSaving = false) }
-                return@launch
+                _toastMessage.emit("An unexpected error occurred: ${e.message}")
             }
-
-            val recipeToSave = Recipe(
-                id = recipeIdToUse,
-                title = currentState.title,
-                description = currentState.description,
-                servings = servings,
-                ingredients = currentState.ingredients,
-                steps = currentState.steps,
-                tags = currentState.tags,
-                imageUrl = imageUrl,
-                createdBy = auth.currentUser?.uid ?: ""
-            )
-
-            val saveResult = recipeRepository.saveRecipe(recipeToSave)
-
-            saveResult.fold(
-                onSuccess = { savedRecipeId ->
-                    _uiState.update { it.copy(isSaving = false, saveSuccess = true, recipeId = savedRecipeId) }
-                    _toastMessage.emit("Recipe saved successfully!")
-                    navigationService.goBack()
-                },
-                onFailure = { e ->
-                    _uiState.update { it.copy(isSaving = false) }
-                    _toastMessage.emit("Error saving recipe: ${e.message}")
-                }
-            )
         }
     }
 }

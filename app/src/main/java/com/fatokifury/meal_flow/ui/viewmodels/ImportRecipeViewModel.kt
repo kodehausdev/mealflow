@@ -139,7 +139,7 @@ class ImportRecipeViewModel @Inject constructor(
             "<script type=\"application/ld+json\">" to "</script>",
             "<script type='application/ld+json'>" to "</script>",
             "<script type=application/ld+json>" to "</script>",
-            """<script[^>]*type\s*=\s*["\']?application/ld\+json["\']?[^>]*>""".toRegex() to "</script>"
+            """<script[^>]*type\s*=\s*["']?application/ld\+json["']?[^>]*>""".toRegex() to "</script>"
         )
 
         var foundScripts = 0
@@ -207,16 +207,29 @@ class ImportRecipeViewModel @Inject constructor(
         throw Exception("No valid 'Recipe' object found in any JSON-LD script tag.")
     }
 
+    // In ImportRecipeViewModel.kt
     private fun parseIngredients(jsonArray: JSONArray): List<Ingredient> {
         return (0 until jsonArray.length()).mapNotNull { i ->
             val rawString = jsonArray.optString(i)
-            if (rawString.isNotBlank()) {
-                Ingredient(name = rawString, quantity = 1.0, unit = "unit")
+            if (rawString.isBlank()) return@mapNotNull null
+
+            val parts = rawString.trim().split(" ")
+
+            // Try to parse "quantity unit name" format
+            val quantity = parts.firstOrNull()?.toDoubleOrNull()
+
+            if (quantity != null && parts.size >= 2) {
+                // It looks like "1.5 cup flour"
+                val unit = parts.getOrNull(1) ?: ""
+                val name = if (parts.size > 2) parts.subList(2, parts.size).joinToString(" ") else ""
+                Ingredient(name = name, quantity = quantity, unit = unit)
             } else {
-                null
+                // Could not parse quantity, treat the whole line as the name
+                Ingredient(name = rawString, quantity = 1.0, unit = "") // Fallback to old behavior
             }
         }
     }
+
 
     private fun findRecipeObject(jsonObject: JSONObject): JSONObject? {
         if (isRecipeType(jsonObject)) {
@@ -250,7 +263,7 @@ class ImportRecipeViewModel @Inject constructor(
 
     private fun parseImageUrl(imageNode: Any?): String? {
         return when (imageNode) {
-            is JSONObject -> imageNode.optString("url", null)
+            is JSONObject -> imageNode.optString("url", "")
             is JSONArray -> if (imageNode.length() > 0) parseImageUrl(imageNode.opt(0)) else null
             is String -> imageNode
             else -> null

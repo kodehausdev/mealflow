@@ -39,7 +39,7 @@ class RecipeDetailViewModel @Inject constructor(
         loadRecipeDetails()
     }
 
-    private fun loadRecipeDetails() {
+    fun loadRecipeDetails() {
         if (recipeId == null || recipeId == "new") {
             _uiState.update { it.copy(isLoading = false, errorMessage = "Recipe ID not found.") }
             return

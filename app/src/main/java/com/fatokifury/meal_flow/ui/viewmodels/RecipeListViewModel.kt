@@ -28,6 +28,7 @@ data class RecipeListUiState(
     val recipes: List<Recipe> = emptyList(),
     val isLoading: Boolean = true,
     val userMessage: UserMessage? = null,
+    val isGridView: Boolean = false
 )
 
 @HiltViewModel
@@ -54,7 +55,8 @@ class RecipeListViewModel @Inject constructor(
                 .onStart { _uiState.update { it.copy(isLoading = true, userMessage = null) } }
                 .catch { exception ->
                     Log.e("RecipeListVM", "Error collecting recipes", exception)
-                    val message = UserMessage(id = System.nanoTime(), message = "Error: ${exception.message}")
+                    val message =
+                        UserMessage(id = System.nanoTime(), message = "Error: ${exception.message}")
                     _uiState.update { it.copy(isLoading = false, userMessage = message) }
                 }
                 .collect { recipeList ->
@@ -125,10 +127,17 @@ class RecipeListViewModel @Inject constructor(
     fun deleteRecipe(recipe: Recipe) {
         viewModelScope.launch {
             recipeRepository.deleteRecipe(recipe.id).onSuccess {
-                val message = UserMessage(id = System.nanoTime(), message = "'${recipe.title}' deleted.", recipe = recipe)
+                val message = UserMessage(
+                    id = System.nanoTime(),
+                    message = "'${recipe.title}' deleted.",
+                    recipe = recipe
+                )
                 _uiState.update { it.copy(userMessage = message) }
             }.onFailure {
-                val message = UserMessage(id = System.nanoTime(), message = "Failed to delete '${recipe.title}'.")
+                val message = UserMessage(
+                    id = System.nanoTime(),
+                    message = "Failed to delete '${recipe.title}'."
+                )
                 _uiState.update { it.copy(userMessage = message) }
             }
         }
@@ -137,13 +146,22 @@ class RecipeListViewModel @Inject constructor(
     fun undoDelete(recipe: Recipe) {
         viewModelScope.launch {
             recipeRepository.saveRecipe(recipe).onFailure {
-                val message = UserMessage(id = System.nanoTime(), message = "Failed to restore '${recipe.title}'.")
+                val message = UserMessage(
+                    id = System.nanoTime(),
+                    message = "Failed to restore '${recipe.title}'."
+                )
                 _uiState.update { it.copy(userMessage = message) }
             }
         }
     }
+        fun onToggleView() {
+            _uiState.update { currentState ->
+                currentState.copy(isGridView = !currentState.isGridView)
+            }
+        }
 
-    fun userMessageShown() {
-        _uiState.update { it.copy(userMessage = null) }
+        fun userMessageShown() {
+            _uiState.update { it.copy(userMessage = null) }
+        }
+
     }
-}

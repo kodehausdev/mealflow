@@ -7,57 +7,26 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.Tag
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -79,7 +48,7 @@ fun AddRecipeScreen(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(key1 = true) {
+    LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
@@ -90,36 +59,46 @@ fun AddRecipeScreen(
             TopAppBar(
                 title = {
                     Text(
-                        if (uiState.recipeId != null) stringResource(id = R.string.add_recipe_edit_recipe_title) else stringResource(id = R.string.add_recipe_add_new_recipe_title),
-                        style = MaterialTheme.typography.titleLarge
+                        if (uiState.recipeId != null)
+                            stringResource(id = R.string.add_recipe_edit_recipe_title)
+                        else
+                            stringResource(id = R.string.add_recipe_add_new_recipe_title)
                     )
                 },
+                navigationIcon = {
+                    IconButton(onClick = { /* Navigate back */ }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = { viewModel.saveRecipe() },
-                icon = { Icon(Icons.Filled.Save, stringResource(id = R.string.add_recipe_save_recipe_button)) },
-                text = { Text(stringResource(id = R.string.add_recipe_save_recipe_button)) },
-                expanded = true,
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        },
-        floatingActionButtonPosition = FabPosition.End
+            if (!uiState.isSaving) {
+                ExtendedFloatingActionButton(
+                    onClick = { viewModel.saveRecipe() },
+                    icon = { Icon(Icons.Filled.Save, null) },
+                    text = { Text(stringResource(id = R.string.add_recipe_save_recipe_button)) }
+                )
+            } else {
+                ExtendedFloatingActionButton(
+                    onClick = { },
+                    icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) },
+                    text = { Text("Saving...") }
+                )
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(horizontal = Dimens.spacing_medium)
+                .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .padding(Dimens.spacing_medium)
         ) {
-            Spacer(modifier = Modifier.height(Dimens.spacing_medium))
-
+            // Image Picker
             ImagePicker(
                 selectedImageUri = uiState.selectedImageUri,
                 existingImageUrl = uiState.existingImageUrl,
@@ -128,9 +107,10 @@ fun AddRecipeScreen(
 
             Spacer(modifier = Modifier.height(Dimens.spacing_large))
 
-            ElevatedCard(
+            // Basic Info Card
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
+                colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
             ) {
@@ -144,8 +124,7 @@ fun AddRecipeScreen(
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next,
                             capitalization = KeyboardCapitalization.Words
-                        ),
-                        shape = MaterialTheme.shapes.medium
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(Dimens.spacing_medium))
@@ -154,15 +133,13 @@ fun AddRecipeScreen(
                         value = uiState.description,
                         onValueChange = viewModel::onDescriptionChange,
                         label = { Text(stringResource(id = R.string.add_recipe_description_label)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = Dimens.text_field_height),
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        maxLines = 5,
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next,
                             capitalization = KeyboardCapitalization.Sentences
-                        ),
-                        maxLines = 5,
-                        shape = MaterialTheme.shapes.medium
+                        )
                     )
 
                     Spacer(modifier = Modifier.height(Dimens.spacing_medium))
@@ -175,15 +152,18 @@ fun AddRecipeScreen(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
+                            imeAction = ImeAction.Done
                         ),
-                        shape = MaterialTheme.shapes.medium
+                        keyboardActions = KeyboardActions(
+                            onDone = { focusManager.clearFocus() }
+                        )
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(Dimens.spacing_large))
 
+            // Ingredients Section
             SectionHeader(
                 title = stringResource(id = R.string.add_recipe_ingredients_title),
                 icon = Icons.AutoMirrored.Filled.List
@@ -191,14 +171,89 @@ fun AddRecipeScreen(
 
             Spacer(modifier = Modifier.height(Dimens.spacing_small))
 
+            // Ingredient Input
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(Dimens.spacing_medium)) {
+                    OutlinedTextField(
+                        value = uiState.currentIngredientName,
+                        onValueChange = viewModel::onCurrentIngredientNameChange,
+                        label = { Text("Ingredient Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            imeAction = ImeAction.Next,
+                            capitalization = KeyboardCapitalization.Words
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.currentIngredientQuantity,
+                            onValueChange = viewModel::onCurrentIngredientQuantityChange,
+                            label = { Text("Quantity") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            )
+                        )
+
+                        OutlinedTextField(
+                            value = uiState.currentIngredientUnit,
+                            onValueChange = viewModel::onCurrentIngredientUnitChange,
+                            label = { Text("Unit") },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    viewModel.addIngredient()
+                                    focusManager.clearFocus()
+                                }
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+                    Button(
+                        onClick = {
+                            viewModel.addIngredient()
+                            focusManager.clearFocus()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(Dimens.spacing_small))
+                        Text("Add Ingredient")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+            // Ingredients List
             if (uiState.ingredients.isNotEmpty()) {
-                ElevatedCard(
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.elevatedCardColors(
+                    colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     )
                 ) {
-                    Column(modifier = Modifier.padding(vertical = Dimens.card_padding_vertical)) {
+                    Column(modifier = Modifier.padding(vertical = Dimens.spacing_small)) {
                         uiState.ingredients.forEach { ingredient ->
                             IngredientListItem(
                                 ingredient = ingredient,
@@ -207,80 +262,175 @@ fun AddRecipeScreen(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(Dimens.spacing_small))
             }
 
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                AddIngredientInput(
-                    name = uiState.currentIngredientName,
-                    quantity = uiState.currentIngredientQuantity,
-                    unit = uiState.currentIngredientUnit,
-                    onNameChange = viewModel::onCurrentIngredientNameChange,
-                    onQuantityChange = viewModel::onCurrentIngredientQuantityChange,
-                    onUnitChange = viewModel::onCurrentIngredientUnitChange,
-                    onAdd = {
-                        viewModel.addIngredient()
-                        focusManager.clearFocus()
-                    },
-                    focusManager = focusManager
+            Spacer(modifier = Modifier.height(Dimens.spacing_large))
+//          ---- STEPS SECTION ---
+            SectionHeader(
+                title = "Steps",
+                icon = Icons.Default.FormatListNumbered)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Input for a new step
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = uiState.currentStep,
+                    onValueChange = viewModel::onCurrentStepChange,
+                    label = { Text("Add a new step") },
+                    modifier = Modifier.weight(1f)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = viewModel::addStep) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Step")
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Step Input
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(Dimens.spacing_medium)) {
+                    OutlinedTextField(
+                        value = uiState.currentStep,
+                        onValueChange = viewModel::onCurrentStepChange,
+                        label = { Text("Step Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.addStep()
+                                focusManager.clearFocus()
+                            }
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+                    Button(
+                        onClick = {
+                            viewModel.addStep()
+                            focusManager.clearFocus()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(Dimens.spacing_small))
+                        Text("Add Step")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+            // Steps List
+            if (uiState.steps.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(vertical = Dimens.spacing_small)) {
+                        uiState.steps.forEachIndexed { index, step ->
+                            StepListItem(
+                                stepNumber = index + 1,
+                                step = step,
+                                onRemove = { viewModel.removeStep(step) }
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(Dimens.spacing_large))
 
-            // The rest of the screen remains the same
-        }
-    }
-}
+            // Tags Section
+            SectionHeader(
+                title = "Tags",
+                icon = Icons.Default.Tag
+            )
 
-@Composable
-private fun AddIngredientInput(
-    name: String,
-    quantity: String,
-    unit: String,
-    onNameChange: (String) -> Unit,
-    onQuantityChange: (String) -> Unit,
-    onUnitChange: (String) -> Unit,
-    onAdd: () -> Unit,
-    focusManager: FocusManager
-) {
-    Row(
-        modifier = Modifier.padding(Dimens.spacing_medium),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small)
-    ) {
-        OutlinedTextField(
-            value = name,
-            onValueChange = onNameChange,
-            label = { Text("Ingredient") },
-            modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-        )
-        OutlinedTextField(
-            value = quantity,
-            onValueChange = onQuantityChange,
-            label = { Text("Qty") },
-            modifier = Modifier.width(80.dp),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Decimal,
-                imeAction = ImeAction.Next
-            ),
-        )
-        OutlinedTextField(
-            value = unit,
-            onValueChange = onUnitChange,
-            label = { Text("Unit") },
-            modifier = Modifier.width(90.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = {
-                onAdd()
-            })
-        )
-        IconButton(onClick = onAdd) {
-            Icon(Icons.Default.AddCircle, contentDescription = "Add Ingredient")
+            Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+            // Tag Input
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                )
+            ) {
+                Column(modifier = Modifier.padding(Dimens.spacing_medium)) {
+                    OutlinedTextField(
+                        value = uiState.currentTag,
+                        onValueChange = viewModel::onCurrentTagChange,
+                        label = { Text("Tag (e.g., Dinner, Vegan, Quick)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Words,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                viewModel.addTag()
+                                focusManager.clearFocus()
+                            }
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+                    Button(
+                        onClick = {
+                            viewModel.addTag()
+                            focusManager.clearFocus()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(Dimens.spacing_small))
+                        Text("Add Tag")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+            // Tags List
+            if (uiState.tags.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    )
+                ) {
+                    FlowRow(
+                        modifier = Modifier.padding(Dimens.spacing_medium),
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small),
+                        verticalArrangement = Arrangement.spacedBy(Dimens.spacing_small)
+                    ) {
+                        uiState.tags.forEach { tag ->
+                            TagChip(
+                                tag = tag,
+                                onRemove = { viewModel.removeTag(tag) }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(Dimens.spacing_extra_large * 2))
         }
     }
 }
@@ -290,7 +440,8 @@ private fun IngredientListItem(
     ingredient: Ingredient,
     onRemove: () -> Unit
 ) {
-    val quantityFormatter = DecimalFormat("0.##")
+    val formatter = DecimalFormat("0.##")
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -298,13 +449,76 @@ private fun IngredientListItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "•",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(end = Dimens.spacing_small)
+            )
+            Text(
+                text = "${formatter.format(ingredient.quantity)} ${ingredient.unit} ${ingredient.name}",
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@Composable
+private fun StepListItem(
+    stepNumber: Int,
+    step: String,
+    onRemove: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Dimens.spacing_medium, vertical = Dimens.spacing_small),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
+    ) {
+        Surface(
+            shape = MaterialTheme.shapes.small,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(28.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    text = stepNumber.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+
         Text(
-            text = "• ${quantityFormatter.format(ingredient.quantity)} ${ingredient.unit} ${ingredient.name}",
+            text = step,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        IconButton(onClick = onRemove, modifier = Modifier.size(Dimens.icon_button_size_small)) {
-            Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Remove Ingredient")
+
+        IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(36.dp)
+        ) {
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Remove",
+                tint = MaterialTheme.colorScheme.error
+            )
         }
     }
 }
@@ -313,28 +527,26 @@ private fun IngredientListItem(
 private fun ImagePicker(
     selectedImageUri: Uri?,
     existingImageUrl: String?,
-    onImageSelected: (Uri?) -> Unit,
-    modifier: Modifier = Modifier
+    onImageSelected: (Uri?) -> Unit
 ) {
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> onImageSelected(uri) }
-    )
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri -> onImageSelected(uri) }
 
     val imageToShow = selectedImageUri ?: existingImageUrl
 
     Box(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .height(Dimens.image_picker_height)
+            .height(200.dp)
             .clip(MaterialTheme.shapes.large)
             .border(
-                width = Dimens.spacing_extra_small / 2,
+                width = 1.dp,
                 color = MaterialTheme.colorScheme.outline,
                 shape = MaterialTheme.shapes.large
             )
             .clickable {
-                photoPickerLauncher.launch(
+                launcher.launch(
                     PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
@@ -343,53 +555,80 @@ private fun ImagePicker(
         if (imageToShow != null) {
             AsyncImage(
                 model = imageToShow,
-                contentDescription = "Selected recipe image",
+                contentDescription = "Recipe image",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
         } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
                 Icon(
-                    imageVector = Icons.Filled.Image,
-                    contentDescription = "Add Image",
-                    modifier = Modifier.size(Dimens.icon_size_large),
+                    Icons.Filled.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(48.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(Dimens.spacing_small))
-                Text("Tap to add an image", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Tap to add image",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagChip(
+    tag: String,
+    onRemove: () -> Unit
+) {
+    AssistChip(
+        onClick = { },
+        label = { Text(tag) },
+        trailingIcon = {
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.size(18.dp)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Remove tag",
+                    modifier = Modifier.size(14.dp)
+                )
+            }
+        },
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            labelColor = MaterialTheme.colorScheme.onSecondaryContainer
+        )
+    )
+}
+
 @Composable
 private fun SectionHeader(
     title: String,
-    icon: ImageVector,
-    optional: Boolean = false
+    icon: ImageVector
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = Dimens.card_padding_vertical)
+        modifier = Modifier.padding(horizontal = Dimens.spacing_small)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(Dimens.section_header_icon_size)
+            modifier = Modifier.size(24.dp)
         )
         Spacer(modifier = Modifier.width(Dimens.spacing_small))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
         )
-        if (optional) {
-            Spacer(modifier = Modifier.width(Dimens.spacing_small))
-            Text(
-                text = stringResource(id = R.string.optional_label),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
     }
 }

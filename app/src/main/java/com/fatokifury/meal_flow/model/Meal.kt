@@ -1,6 +1,5 @@
 package com.fatokifury.meal_flow.model
 
-import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ServerTimestamp
 import java.util.Date
 

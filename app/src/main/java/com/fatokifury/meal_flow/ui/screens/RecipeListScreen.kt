@@ -49,6 +49,7 @@ import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
 import com.fatokifury.meal_flow.model.Recipe
 import com.fatokifury.meal_flow.ui.theme.Dimens
+import com.fatokifury.meal_flow.ui.viewmodels.RecipeListUiState
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeListViewModel
 import kotlinx.coroutines.launch
 
@@ -87,7 +88,7 @@ fun RecipeListScreen(
     // --- END OF DIALOG STATE ---
 
     var searchQuery by remember { mutableStateOf("") }
-    var viewType by remember { mutableStateOf(ViewType.LIST) }
+//    var viewType by remember { mutableStateOf(ViewType.LIST) }
 
     val filteredRecipes = uiState.recipes.filter {
         it.title.contains(searchQuery, ignoreCase = true) ||
@@ -184,15 +185,11 @@ fun RecipeListScreen(
     ) { paddingValues ->
         RecipeListContent(
             modifier = Modifier.padding(paddingValues),
-            isLoading = uiState.isLoading,
-            recipes = uiState.recipes,
-            filteredRecipes = filteredRecipes,
+            uiState = uiState,
+            viewModel = viewModel,
+            filteredRecipes = uiState.recipes.filter { it.title.contains(searchQuery, ignoreCase = true) },
             searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            viewType = viewType,
-            onViewTypeChange = { viewType = it },
-            // Pass the viewModel down so child composables can call its functions
-            viewModel = viewModel
+            onSearchQueryChange = { searchQuery = it }
         )
     }
 }
@@ -201,14 +198,11 @@ fun RecipeListScreen(
 @Composable
 private fun RecipeListContent(
     modifier: Modifier = Modifier,
-    viewModel: RecipeListViewModel, // Receives the ViewModel
-    isLoading: Boolean,
-    recipes: List<Recipe>,
+    uiState: RecipeListUiState,
+    viewModel: RecipeListViewModel,
     filteredRecipes: List<Recipe>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
-    viewType: ViewType,
-    onViewTypeChange: (ViewType) -> Unit,
 ) {
     Column(
         modifier = modifier.fillMaxSize()
@@ -244,21 +238,25 @@ private fun RecipeListContent(
             }
 
             IconToggleButton(
-                checked = viewType == ViewType.GRID,
-                onCheckedChange = { onViewTypeChange(if (it) ViewType.GRID else ViewType.LIST) }) {
+                checked = uiState.isGridView,
+                onCheckedChange = { viewModel.onToggleView() } // <-- Correct: Call the ViewModel
+            ) {
                 Icon(
-                    if (viewType == ViewType.GRID) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                    if (uiState.isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                     contentDescription = "Toggle view"
                 )
             }
         }
 
         // Content
-        if (isLoading) {
+        // Inside RecipeListContent...
+
+        // Content
+        if (uiState.isLoading) { // FIX: Read from uiState.isLoading
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
-        } else if (recipes.isEmpty()) {
+        } else if (uiState.recipes.isEmpty()) { // FIX: Read from uiState.recipes
             // The EmptyState's buttons now correctly call the ViewModel
             EmptyState(
                 onAddRecipe = viewModel::onAddRecipeClicked,
@@ -268,21 +266,21 @@ private fun RecipeListContent(
             EmptySearchState(searchQuery = searchQuery)
         } else {
             AnimatedContent(
-                targetState = viewType,
+                targetState = uiState.isGridView,
                 label = "view_type_animation",
                 transitionSpec = {
                     fadeIn(animationSpec = tween(220, delayMillis = 90))
                         .togetherWith(fadeOut(animationSpec = tween(90)))
                 }
-            ) { targetViewType ->
-                when (targetViewType) {
-                    ViewType.LIST -> RecipeListView(
+            ) { isGrid ->
+                if (isGrid) {
+                    RecipeGridView(
                         recipes = filteredRecipes,
                         onRecipeClick = { viewModel.onRecipeSelected(it.id) },
                         onRecipeDelete = { viewModel.deleteRecipe(it) }
                     )
-
-                    ViewType.GRID -> RecipeGridView(
+                } else {
+                    RecipeListView(
                         recipes = filteredRecipes,
                         onRecipeClick = { viewModel.onRecipeSelected(it.id) },
                         onRecipeDelete = { viewModel.deleteRecipe(it) }
@@ -292,6 +290,7 @@ private fun RecipeListContent(
         }
     }
 }
+
 
 
 @Composable

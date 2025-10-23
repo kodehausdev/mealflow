@@ -347,11 +347,6 @@ private fun EmptyState(
     }
 }
 
-// ... Keep the rest of your file (RecipeListView, RecipeGridItem, etc.) as is ...
-// NOTE: I am not including the other composables like RecipeListView, EmptySearchState, ImportUrlDialog
-// because they were not shown in the file and are likely correct. If they have errors,
-// they will be easy to fix now that the main screen is clean.
-
 @Composable
 private fun EmptySearchState(searchQuery: String) {
     Column(

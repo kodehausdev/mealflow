@@ -39,7 +39,8 @@ data class AddRecipeUiState(
     val isSaving: Boolean = false,
     val saveSuccess: Boolean = false,
     val isLoading: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val originalRecipe: Recipe? = null
 )
 
 @HiltViewModel
@@ -80,7 +81,8 @@ class AddRecipeViewModel @Inject constructor(
                         steps = recipe.steps,
                         tags = recipe.tags,
                         existingImageUrl = recipe.imageUrl,
-                        isLoading = false
+                        isLoading = false,
+                        originalRecipe = recipe
                     )
                 }
             }.onFailure { exception ->
@@ -214,6 +216,22 @@ class AddRecipeViewModel @Inject constructor(
 
             _uiState.update { it.copy(isSaving = true) }
 
+            val originalRecipe = currentState.originalRecipe
+            val newServings = currentState.servings.toInt()
+            val ingredientsToSave = if (
+                originalRecipe != null &&
+                originalRecipe.servings != newServings &&
+                originalRecipe.servings > 0
+            ){
+                originalRecipe.ingredients.map { originalIngredient ->
+                    val quantityPerOriginalServing = originalIngredient.quantity / originalRecipe.servings
+                    val newRescaledQuantity = quantityPerOriginalServing * newServings
+                    originalIngredient.copy(quantity = newRescaledQuantity)
+                }
+            } else {
+                // Servings did not change OR it's a new recipe, so use the current ingredients as is.
+                currentState.ingredients
+            }
             try {
                 val recipeIdToUse = currentState.recipeId ?: recipeRepository.getNewRecipeId()
 
@@ -228,7 +246,7 @@ class AddRecipeViewModel @Inject constructor(
                     title = currentState.title,
                     description = currentState.description,
                     servings = servings,
-                    ingredients = currentState.ingredients,
+                    ingredients = ingredientsToSave,
                     steps = currentState.steps,
                     tags = currentState.tags,
                     imageUrl = imageUrlToSave, // Save URI as string

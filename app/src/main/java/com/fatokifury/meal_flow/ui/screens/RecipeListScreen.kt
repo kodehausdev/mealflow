@@ -248,8 +248,6 @@ private fun RecipeListContent(
             }
         }
 
-        // Content
-        // Inside RecipeListContent...
 
         // Content
         if (uiState.isLoading) { // FIX: Read from uiState.isLoading

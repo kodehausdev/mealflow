@@ -4,12 +4,15 @@ import android.net.Uri
 import com.fatokifury.meal_flow.model.Recipe
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.snapshots
+import com.google.firebase.firestore.toObjects
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
-import com.google.firebase.firestore.ktx.snapshots // <-- Add this import
 import kotlinx.coroutines.flow.Flow // <-- Add this import
 import kotlinx.coroutines.flow.map // <-- Add this import
+import kotlinx.coroutines.flow.emptyFlow
+
 
 
 
@@ -19,16 +22,38 @@ class RecipeRepositoryImpl @Inject constructor(
     private val auth: FirebaseAuth
 ) : RecipeRepository {
 
-
+// In RecipeRepositoryImpl.kt
 
     override fun getAllRecipes(): Flow<List<Recipe>> {
-        val currentUser = auth.currentUser
-        // Return an empty flow if the user is not logged in
+        // 1. Get the current user ID safely.
+        // The ?.uid returns null if currentUser is null.
+        // The .takeIf { it.isNotBlank() } returns null if the uid is blank.
+        val userId = auth.currentUser?.uid.takeIf { !it.isNullOrBlank() }
+
+        // 2. If userId is null or blank at this point, immediately return an empty flow.
+        // This is our crash protection.
+        if (userId == null) {
+            return emptyFlow()
+        }
+
+        // 3. The rest of the code now runs only if we have a valid userId.
         return firestore.collection("recipes")
-            .whereEqualTo("createdBy", currentUser?.uid)
-            .snapshots() // This returns a Flow of QuerySnapshot
-            .map { snapshot -> snapshot.toObjects(Recipe::class.java) } // Convert to List<Recipe>
+            .whereEqualTo("createdBy", userId) // Use the safe userId variable
+            .snapshots()
+            .map { snapshot ->
+                try {
+                    // This try-catch is for data conversion errors, which is also good practice.
+                    snapshot.toObjects<Recipe>()
+                } catch (e: Exception) {
+                    // Log the error in a real app, for now, return empty list to prevent crash
+                    // Log.e("Firestore", "Error converting recipes", e)
+                    emptyList()
+                }
+            }
     }
+
+
+
 
     override suspend fun deleteRecipe(recipeId: String): Result<Unit> {
         return try {

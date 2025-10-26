@@ -49,6 +49,7 @@
     <string name="recipe_list_import_button">Import</string>
     <string name="recipe_list_empty_url">URL cannot be empty.</string>
     <plurals name="recipe_count_subtitle">
+        <item quantity="zero">%d saved recipe 🍽️</item>
         <item quantity="one">%d saved meal 🍽️</item>
         <item quantity="other">%d saved meals 🍽️</item>
     </plurals>

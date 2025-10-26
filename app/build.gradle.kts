@@ -91,7 +91,7 @@ dependencies {
 
 
     // ========== ANDROID CORE ==========
-    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.foundation)
@@ -109,16 +109,22 @@ dependencies {
     implementation(libs.bundles.hilt)
     implementation(libs.androidx.camera.core)
     implementation(libs.androidx.foundation)
+
     ksp(libs.hilt.android.compiler)
 
     // ========== DATABASE ==========
     implementation(libs.bundles.room)
     ksp(libs.room.compiler)
 
-    // ========== FIREBASE ==========
+// ========== FIREBASE ==========
     implementation(platform(libs.firebase.bom))
     implementation(libs.bundles.firebase)
-    implementation(libs.firebase.storage.ktx)
+    implementation(libs.firebase.firestore)
+    implementation(libs.google.firebase.auth)
+    implementation(libs.firebase.storage)
+
+
+
 
 
     // ========== COROUTINES ==========

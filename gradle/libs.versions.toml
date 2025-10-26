@@ -1,14 +1,16 @@
 [versions]
-agp = "8.12.1"
+agp = "8.13.0"
 composeCalendarView = "2.5.0"
 coreKtxVersion = "1.13.1"
+firebaseBomVersion = "34.4.0"
 ktor = "2.3.5"
 jsoup = "1.17.2"
 coilCompose = "2.7.0"
 compose-compiler = "2.0.21"
 hilt = "2.51.1"
 kotlin = "2.0.21"
-kotlinxCoroutines = "1.8.1"
+# FIX: Update to 1.9.0 to match Firebase Firestore 26.0.2 requirements
+kotlinxCoroutines = "1.9.0"
 kotlinxSerializationJson = "1.6.3"
 ksp = "2.0.21-1.0.25"
 lifecycleRuntime = "2.9.2"
@@ -29,8 +31,8 @@ materialIconsExtended = "1.7.8"
 # Compose - Updated to compatible version
 composeBom = "2024.06.00"
 
-# Firebase
-firebaseBom = "33.1.2"
+# Firebase - Using BOM for version management
+firebaseBom = "34.4.0"
 googleServices = "4.4.3"
 
 # Testing
@@ -44,15 +46,20 @@ volley = "1.2.1"
 cameraCore = "1.5.1"
 foundation = "1.9.3"
 
+# REMOVED: These are managed by Firebase BOM
+# firebaseAuth = "24.0.1"
+# firebaseStorageKtx = "22.0.1"
+# firebaseFirestoreKtx = "26.0.2"
+
 [libraries]
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation"}
-androidx-core-ktx-v1131 = { module = "androidx.core:core-ktx", version.ref = "coreKtxVersion" }
 compose-calendar-view = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "composeCalendarView" }
 
 # Networking
-firebase-storage-ktx = { module = "com.google.firebase:firebase-storage-ktx" }
 foundation = { module = "androidx.compose.foundation:foundation" }
+google-firebase-auth = { module = "com.google.firebase:firebase-auth" }
+google-firebase-firestore = { module = "com.google.firebase:firebase-firestore" }
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
@@ -61,7 +68,7 @@ jsoup = { module = "org.jsoup:jsoup", version.ref = "jsoup" }
 
 # AndroidX Core
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-core-testing = { module = "androidx.arch.core:core-testing", version.ref = "coreTesting" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-junit-ext = { group = "androidx.test.ext", name = "junit", version.ref = "junitExt" }
@@ -101,10 +108,11 @@ room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "
 # Navigation
 androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
 
-# Firebase
+# Firebase - Let BOM manage versions
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth-ktx" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore"}
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 
 # AI/ML
 google-ai-generativeai = { group = "com.google.ai.client.generativeai", name = "generativeai", version.ref = "gemini"}
@@ -142,7 +150,8 @@ kotlinxCoroutines = [
 ]
 firebase = [
     "firebase-auth",
-    "firebase-firestore"
+    "firebase-firestore",
+    "firebase-storage"
 ]
 
 [plugins]

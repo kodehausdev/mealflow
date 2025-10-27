@@ -106,5 +106,6 @@
     <string name="recipe_detail_could_not_load">Could not load recipe.</string>
     <string name="empty_state_import_recipe">Import_Recipe</string>
     <string name="add_recipe">"Add Recipe "</string>
+    <string name="recipe_detail_edit_recipe_fab">Edit recipe</string>
 
 </resources>

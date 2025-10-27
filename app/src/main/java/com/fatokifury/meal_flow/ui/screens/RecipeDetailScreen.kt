@@ -1,6 +1,9 @@
 package com.fatokifury.meal_flow.ui.screens
 
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -28,19 +32,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
 import com.fatokifury.meal_flow.model.Ingredient
@@ -57,20 +62,20 @@ fun RecipeDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-    val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsState()
+    val lazyListState = rememberLazyListState()
+    var isFabVisible by remember { mutableStateOf(true) }
 
+    LaunchedEffect(lazyListState) {
+        snapshotFlow { lazyListState.firstVisibleItemIndex }
+            .collect { firstVisibleItem ->
+                isFabVisible = firstVisibleItem == 0
+            }
+    }
 
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
             viewModel.clearErrorMessage()
-        }
-    }
-
-    LaunchedEffect(lifecycleState) {
-        if (lifecycleState == Lifecycle.State.RESUMED) {
-            viewModel.loadRecipeDetails()
         }
     }
 
@@ -88,17 +93,20 @@ fun RecipeDetailScreen(
             )
         },
         floatingActionButton = {
-            if (recipe != null) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        viewModel.onEditRecipeClicked()
-                        (Screen.AddRecipe.createRoute(recipe.id))
-                    },
-                    icon = { Icon(Icons.Filled.Edit, contentDescription = stringResource(id = R.string.add_recipe_edit_recipe_title)) },
-                    text = { Text(stringResource(id = R.string.add_recipe_edit_recipe_title)) },
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            AnimatedVisibility(
+                visible = isFabVisible,
+                enter = slideInHorizontally(initialOffsetX = { it * 2 }),
+                exit = slideOutHorizontally(targetOffsetX = { it * 2 })
+            ) {
+                FloatingActionButton(
+                    onClick = { viewModel.onEditRecipeClicked() },
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(id = R.string.recipe_detail_edit_recipe_fab)
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -110,7 +118,7 @@ fun RecipeDetailScreen(
             if (uiState.isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (recipe != null) {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(state = lazyListState, modifier = Modifier.fillMaxSize()) {
                     item {
                         AsyncImage(
                             model = recipe.imageUrl,

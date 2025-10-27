@@ -14,9 +14,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,6 +69,8 @@ fun RecipeListScreen(
     // onRecipeClick: (Recipe) -> Unit,
     // onAddRecipe: () -> Unit,
 ) {
+    val lazyGridState = rememberLazyGridState()
+    var isFabVisible by remember { mutableStateOf(true) }
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -112,8 +117,22 @@ fun RecipeListScreen(
             viewModel.userMessageShown()
         }
     }
+    LaunchedEffect(lazyListState, lazyGridState, uiState.isGridView
+    ) {        snapshotFlow {
+        if (uiState.isGridView) {
+            lazyGridState.firstVisibleItemIndex
+        } else {
+            lazyListState.firstVisibleItemIndex
+        }
+    }
+        .collect { firstVisibleItem ->
+            isFabVisible = firstVisibleItem == 0
+        }
+    }
 
-    // FAB animation state
+
+
+// FAB animation state
     val expandedFab by remember {
         derivedStateOf { lazyListState.firstVisibleItemIndex == 0 }
     }
@@ -175,11 +194,12 @@ fun RecipeListScreen(
                 shape = RoundedCornerShape(Dimens.fab_corner_radius),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                expanded = expandedFab,
+//                expanded = expandedFab,
                 icon = { Icon(Icons.Filled.Add, stringResource(id = R.string.add_recipe_fab_text)) },
                 text = { Text(stringResource(id = R.string.add_recipe_fab_text)) },
                 modifier = Modifier.scale(fabScale),
-                interactionSource = fabInteractionSource
+                interactionSource = fabInteractionSource,
+                expanded = isFabVisible
             )
         }
     ) { paddingValues ->
@@ -189,7 +209,9 @@ fun RecipeListScreen(
             viewModel = viewModel,
             filteredRecipes = uiState.recipes.filter { it.title.contains(searchQuery, ignoreCase = true) },
             searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it }
+            onSearchQueryChange = { searchQuery = it },
+            listState = lazyListState,
+            gridState = lazyGridState
         )
     }
 }
@@ -203,6 +225,8 @@ private fun RecipeListContent(
     filteredRecipes: List<Recipe>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
+    listState: LazyListState,
+    gridState: LazyGridState
 ) {
     Column(
         modifier = modifier.fillMaxSize()
@@ -273,12 +297,14 @@ private fun RecipeListContent(
             ) { isGrid ->
                 if (isGrid) {
                     RecipeGridView(
+                        state = gridState,
                         recipes = filteredRecipes,
                         onRecipeClick = { viewModel.onRecipeSelected(it.id) },
                         onRecipeDelete = { viewModel.deleteRecipe(it) }
                     )
                 } else {
                     RecipeListView(
+                        state =  listState,
                         recipes = filteredRecipes,
                         onRecipeClick = { viewModel.onRecipeSelected(it.id) },
                         onRecipeDelete = { viewModel.deleteRecipe(it) }
@@ -381,11 +407,13 @@ private fun EmptySearchState(searchQuery: String) {
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun RecipeListView(
+    state: LazyListState,
     recipes: List<Recipe>,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeDelete: (Recipe) -> Unit
 ) {
     LazyColumn(
+        state = state,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             horizontal = Dimens.spacing_medium,
@@ -426,7 +454,7 @@ private fun RecipeListView(
                     }
 
                     val scale by animateFloatAsState(
-                        targetValue = if (dismissBoxState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f,
+                        targetValue = if (dismissBoxState.targetValue == SwipeToDismissBoxValue.Settled) 1f else 1f,
                         label = "dismiss_icon_scale"
                     )
 
@@ -478,10 +506,12 @@ private fun RecipeTagChip(
 @Composable
 private fun RecipeGridView(
     recipes: List<Recipe>,
+    state: LazyGridState,
     onRecipeClick: (Recipe) -> Unit,
     onRecipeDelete: (Recipe) -> Unit
 ) {
     LazyVerticalGrid(
+        state = state,
         columns = GridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(Dimens.spacing_medium),

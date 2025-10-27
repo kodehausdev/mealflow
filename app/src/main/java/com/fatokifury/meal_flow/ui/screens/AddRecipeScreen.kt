@@ -5,9 +5,23 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,12 +29,27 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.RemoveCircleOutline
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +76,16 @@ fun AddRecipeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
+
+    val scrollState = rememberScrollState()
+    var isFabVisible by remember { mutableStateOf(true) }
+
+    LaunchedEffect(scrollState) {
+        snapshotFlow { scrollState.value }
+            .collect { scrollValue ->
+                isFabVisible = scrollValue == 0
+            }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
@@ -76,26 +115,19 @@ fun AddRecipeScreen(
             )
         },
         floatingActionButton = {
-            if (!uiState.isSaving) {
-                ExtendedFloatingActionButton(
-                    onClick = { viewModel.saveRecipe() },
-                    icon = { Icon(Icons.Filled.Save, null) },
-                    text = { Text(stringResource(id = R.string.add_recipe_save_recipe_button)) }
-                )
-            } else {
-                ExtendedFloatingActionButton(
-                    onClick = { },
-                    icon = { CircularProgressIndicator(modifier = Modifier.size(24.dp)) },
-                    text = { Text("Saving...") }
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { viewModel.saveRecipe() },
+                expanded = isFabVisible,
+                icon = { Icon(Icons.Default.Save, contentDescription = null) },
+                text = { Text(stringResource(id = R.string.add_recipe_save_recipe_button)) }
+            )
         }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(Dimens.spacing_medium)
         ) {
             // Image Picker
@@ -272,22 +304,6 @@ fun AddRecipeScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Input for a new step
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = uiState.currentStep,
-                    onValueChange = viewModel::onCurrentStepChange,
-                    label = { Text("Add a new step") },
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                IconButton(onClick = viewModel::addStep) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Add Step")
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
             // Step Input
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -299,7 +315,7 @@ fun AddRecipeScreen(
                     OutlinedTextField(
                         value = uiState.currentStep,
                         onValueChange = viewModel::onCurrentStepChange,
-                        label = { Text("Step Description") },
+                        label = { Text("Add a new step") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 2,
                         maxLines = 4,

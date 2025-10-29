@@ -76,6 +76,10 @@ fun SignUpScreen(
     val emailInvalidError = stringResource(R.string.signup_invalid_email)
     val passwordLengthError = stringResource(R.string.signup_password_min_length)
     val confirmPasswordMismatchError = stringResource(R.string.signup_passwords_do_not_match)
+    val fullName = stringResource(R.string.signup_full_name_label)
+
+
+
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()

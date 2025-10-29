@@ -48,8 +48,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
-import com.fatokifury.meal_flow.model.Ingredient
-import com.fatokifury.meal_flow.navigation.Screen
 import com.fatokifury.meal_flow.ui.theme.Dimens
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeDetailViewModel
 import java.util.Locale

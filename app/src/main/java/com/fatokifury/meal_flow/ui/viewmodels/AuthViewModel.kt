@@ -1,8 +1,8 @@
 package com.fatokifury.meal_flow.ui.viewmodels
 
+import android.util.Log
 import android.util.Patterns
-import androidx.compose.animation.core.copy
-import androidx.compose.ui.semantics.password
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fatokifury.meal_flow.data.AuthRepository
@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.auth.userProfileChangeRequest
 
 sealed class AuthResultEvent {
     data class Success(val message: String) : AuthResultEvent()
@@ -184,6 +186,20 @@ class AuthViewModel @Inject constructor(
             _signUpUiState.update { it.copy(isLoading = true) }
             val result = authRepository.signUp(state.email, state.password)
             result.onSuccess {
+                val firebaseUser = FirebaseAuth.getInstance().currentUser
+                val fullName = state.fullName
+
+                firebaseUser?.updateProfile(
+                    userProfileChangeRequest {
+                        displayName = fullName
+                    }
+                )?.addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        Log.d("AuthViewModel", "Display name updated to $fullName")
+                    } else {
+                        Log.e("AuthViewModel", "Failed to update display name", task.exception)
+                    }
+                }
                 _authEvents.send(AuthResultEvent.Success("Sign Up Successful!"))
                 navigationService.navigateAndPopUp(Screen.MealList.route, Screen.SignUp.route)
             }.onFailure { exception ->

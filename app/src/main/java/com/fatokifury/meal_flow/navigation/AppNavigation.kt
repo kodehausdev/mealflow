@@ -22,6 +22,9 @@ sealed class Screen(val route: String) {
     data object AISuggestions : Screen("ai_suggestions_screen")
     data object MealCalendar : Screen("meal_calendar_screen")
 
+    data object Profile : Screen("profile_screen") // NEW
+
+
 
     data object AddRecipeByUrl : Screen("addRecipeByUrl")
 

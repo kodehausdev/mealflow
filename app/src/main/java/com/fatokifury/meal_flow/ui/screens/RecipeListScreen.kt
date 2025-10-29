@@ -3,14 +3,11 @@ package com.fatokifury.meal_flow.ui.screens
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.size
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,18 +19,18 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.rounded.CalendarToday
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -46,7 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.fatokifury.meal_flow.R
@@ -55,30 +52,25 @@ import com.fatokifury.meal_flow.ui.theme.Dimens
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeListUiState
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeListViewModel
 import kotlinx.coroutines.launch
-
-private enum class ViewType {
-    LIST, GRID
-}
+import androidx.compose.ui.unit.sp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecipeListScreen(
     viewModel: RecipeListViewModel = hiltViewModel(),
-    // These parameters are now handled by the ViewModel, so they can be removed
-     onlogout: () -> Unit,
-    // onRecipeClick: (Recipe) -> Unit,
-    // onAddRecipe: () -> Unit,
+    onlogout: () -> Unit // Keep for now but not used (moved to Profile)
 ) {
     val lazyGridState = rememberLazyGridState()
+    val lazyListState = rememberLazyListState()
     var isFabVisible by remember { mutableStateOf(true) }
+
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
-    val lazyListState = rememberLazyListState()
     val context = LocalContext.current
 
-    // --- DIALOG STATE (Single Source of Truth from ViewModel) ---
+    // Dialog state from ViewModel
     val showImportDialog by viewModel.showImportDialog
     val importUrl by viewModel.importUrl
 
@@ -87,20 +79,18 @@ fun RecipeListScreen(
             urlInput = importUrl,
             onUrlChange = viewModel::onImportUrlChange,
             onDismiss = viewModel::onImportDialogDismiss,
-            onImport = { viewModel.onImportFromUrl(importUrl.text) } // Pass the text from the state
+            onImport = { viewModel.onImportFromUrl(importUrl.text) }
         )
     }
-    // --- END OF DIALOG STATE ---
 
     var searchQuery by remember { mutableStateOf("") }
-//    var viewType by remember { mutableStateOf(ViewType.LIST) }
 
     val filteredRecipes = uiState.recipes.filter {
         it.title.contains(searchQuery, ignoreCase = true) ||
                 it.description.contains(searchQuery, ignoreCase = true)
     }
 
-    // Listen for user messages from the ViewModel
+    // Listen for user messages
     val undoActionLabel = stringResource(R.string.undo)
     LaunchedEffect(uiState.userMessage) {
         uiState.userMessage?.let { userMessage ->
@@ -117,28 +107,27 @@ fun RecipeListScreen(
             viewModel.userMessageShown()
         }
     }
-    LaunchedEffect(lazyListState, lazyGridState, uiState.isGridView
-    ) {        snapshotFlow {
-        if (uiState.isGridView) {
-            lazyGridState.firstVisibleItemIndex
-        } else {
-            lazyListState.firstVisibleItemIndex
-        }
-    }
-        .collect { firstVisibleItem ->
+
+    // FAB visibility based on scroll position
+    LaunchedEffect(lazyListState, lazyGridState, uiState.isGridView) {
+        snapshotFlow {
+            if (uiState.isGridView) {
+                lazyGridState.firstVisibleItemIndex
+            } else {
+                lazyListState.firstVisibleItemIndex
+            }
+        }.collect { firstVisibleItem ->
             isFabVisible = firstVisibleItem == 0
         }
     }
 
-
-
-// FAB animation state
-    val expandedFab by remember {
-        derivedStateOf { lazyListState.firstVisibleItemIndex == 0 }
-    }
+    // FAB animation
     val fabInteractionSource = remember { MutableInteractionSource() }
     val isFabPressed by fabInteractionSource.collectIsPressedAsState()
-    val fabScale by  animateFloatAsState(targetValue = if (isFabPressed) 0.9f else 1f, label = "fab_scale")
+    val fabScale by animateFloatAsState(
+        targetValue = if (isFabPressed) 0.9f else 1f,
+        label = "fab_scale"
+    )
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -152,9 +141,6 @@ fun RecipeListScreen(
                             text = context.resources.getQuantityString(
                                 R.plurals.recipe_count_subtitle,
                                 uiState.recipes.size,
-
-
-
                                 uiState.recipes.size
                             ),
                             style = MaterialTheme.typography.titleSmall,
@@ -163,24 +149,30 @@ fun RecipeListScreen(
                     }
                 },
                 actions = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small)) {
-                        // This button now correctly calls the ViewModel to show the dialog
-                        IconButton(onClick = viewModel::onImportRecipeClicked) {
+                    // Card-style Import button
+                    Surface(
+                        onClick = viewModel::onImportRecipeClicked,
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        tonalElevation = 2.dp,
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             Icon(
                                 imageVector = Icons.Rounded.Link,
-                                contentDescription = stringResource(id = R.string.recipe_list_import_from_url)
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
                             )
-                        }
-                        IconButton(onClick = viewModel::onMealCalendarClicked ) {
-                            Icon(
-                                imageVector = Icons.Rounded.CalendarToday,
-                                contentDescription = stringResource(id = R.string.recipe_list_open_meal_calendar)
-                            )
-                        }
-                        IconButton(onClick = viewModel::onLogoutClicked) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.Logout,
-                                contentDescription = stringResource(R.string.logout)
+                            Text(
+                                text = "Import",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                         }
                     }
@@ -189,25 +181,31 @@ fun RecipeListScreen(
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = viewModel::onAddRecipeClicked,
-                shape = RoundedCornerShape(Dimens.fab_corner_radius),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-//                expanded = expandedFab,
-                icon = { Icon(Icons.Filled.Add, stringResource(id = R.string.add_recipe_fab_text)) },
-                text = { Text(stringResource(id = R.string.add_recipe_fab_text)) },
-                modifier = Modifier.scale(fabScale),
-                interactionSource = fabInteractionSource,
-                expanded = isFabVisible
-            )
+            if (uiState.recipes.isNotEmpty()) {
+                ExtendedFloatingActionButton(
+                    onClick = viewModel::onAddRecipeClicked,
+                    shape = RoundedCornerShape(Dimens.fab_corner_radius),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    expanded = isFabVisible,
+                    icon = {
+                        Icon(
+                            Icons.Filled.Add,
+                            stringResource(id = R.string.add_recipe_fab_text)
+                        )
+                    },
+                    text = { Text(stringResource(id = R.string.add_recipe_fab_text)) },
+                    modifier = Modifier.scale(fabScale),
+                    interactionSource = fabInteractionSource
+                )
+            }
         }
     ) { paddingValues ->
         RecipeListContent(
             modifier = Modifier.padding(paddingValues),
             uiState = uiState,
             viewModel = viewModel,
-            filteredRecipes = uiState.recipes.filter { it.title.contains(searchQuery, ignoreCase = true) },
+            filteredRecipes = filteredRecipes,
             searchQuery = searchQuery,
             onSearchQueryChange = { searchQuery = it },
             listState = lazyListState,
@@ -231,7 +229,7 @@ private fun RecipeListContent(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        // Search and View Options
+        // Search and View Toggle
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -251,7 +249,7 @@ private fun RecipeListContent(
                 placeholder = { Text("Search recipes...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) { // Simpler logic for the close button
+                    if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { onSearchQueryChange("") }) {
                             Icon(Icons.Default.Close, contentDescription = "Clear search")
                         }
@@ -263,7 +261,7 @@ private fun RecipeListContent(
 
             IconToggleButton(
                 checked = uiState.isGridView,
-                onCheckedChange = { viewModel.onToggleView() } // <-- Correct: Call the ViewModel
+                onCheckedChange = { viewModel.onToggleView() }
             ) {
                 Icon(
                     if (uiState.isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
@@ -272,43 +270,46 @@ private fun RecipeListContent(
             }
         }
 
-
         // Content
-        if (uiState.isLoading) { // FIX: Read from uiState.isLoading
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        } else if (uiState.recipes.isEmpty()) { // FIX: Read from uiState.recipes
-            // The EmptyState's buttons now correctly call the ViewModel
-            EmptyState(
-                onAddRecipe = viewModel::onAddRecipeClicked,
-                onImportRecipe = viewModel::onImportRecipeClicked
-            )
-        } else if (filteredRecipes.isEmpty()) {
-            EmptySearchState(searchQuery = searchQuery)
-        } else {
-            AnimatedContent(
-                targetState = uiState.isGridView,
-                label = "view_type_animation",
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(220, delayMillis = 90))
-                        .togetherWith(fadeOut(animationSpec = tween(90)))
+        when {
+            uiState.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
                 }
-            ) { isGrid ->
-                if (isGrid) {
-                    RecipeGridView(
-                        state = gridState,
-                        recipes = filteredRecipes,
-                        onRecipeClick = { viewModel.onRecipeSelected(it.id) },
-                        onRecipeDelete = { viewModel.deleteRecipe(it) }
-                    )
-                } else {
-                    RecipeListView(
-                        state =  listState,
-                        recipes = filteredRecipes,
-                        onRecipeClick = { viewModel.onRecipeSelected(it.id) },
-                        onRecipeDelete = { viewModel.deleteRecipe(it) }
-                    )
+            }
+            uiState.recipes.isEmpty() -> {
+                EmptyState(
+                    onAddRecipe = viewModel::onAddRecipeClicked,
+                    onImportRecipe = viewModel::onImportRecipeClicked
+                )
+            }
+            filteredRecipes.isEmpty() -> {
+                EmptySearchState(searchQuery = searchQuery)
+            }
+            else -> {
+                AnimatedContent(
+                    targetState = uiState.isGridView,
+                    label = "view_type_animation",
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(220, delayMillis = 90))
+                            .togetherWith(fadeOut(animationSpec = tween(90)))
+                    }
+                ) { isGrid ->
+                    if (isGrid) {
+                        RecipeGridView(
+                            state = gridState,
+                            recipes = filteredRecipes,
+                            onRecipeClick = { viewModel.onRecipeSelected(it.id) },
+                            onRecipeDelete = { viewModel.deleteRecipe(it) }
+                        )
+                    } else {
+                        RecipeListView(
+                            state = listState,
+                            recipes = filteredRecipes,
+                            onRecipeClick = { viewModel.onRecipeSelected(it.id) },
+                            onRecipeDelete = { viewModel.deleteRecipe(it) }
+                        )
+                    }
                 }
             }
         }
@@ -316,6 +317,120 @@ private fun RecipeListContent(
 }
 
 
+//@Composable
+//private fun EmptyState(
+//    onAddRecipe: () -> Unit,
+//    onImportRecipe: () -> Unit
+//) {
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(32.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Center
+//    ) {
+//        // Illustration-style icon
+//        Box(
+//            modifier = Modifier.size(200.dp),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            // Background circle
+//            Box(
+//                modifier = Modifier
+//                    .size(180.dp)
+//                    .background(
+//                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+//                        shape = CircleShape
+//                    )
+//            )
+//            // Mid circle
+//            Box(
+//                modifier = Modifier
+//                    .size(140.dp)
+//                    .background(
+//                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+//                        shape = CircleShape
+//                    )
+//            )
+//            // Icon circle
+//            Box(
+//                modifier = Modifier
+//                    .size(100.dp)
+//                    .background(
+//                        color = MaterialTheme.colorScheme.primaryContainer,
+//                        shape = CircleShape
+//                    ),
+//                contentAlignment = Alignment.Center
+//            ) {
+//                Icon(
+//                    imageVector = Icons.Default.RestaurantMenu,
+//                    contentDescription = null,
+//                    modifier = Modifier.size(50.dp),
+//                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+//                )
+//            }
+//        }
+//
+//        Spacer(modifier = Modifier.height(32.dp))
+//
+//        Text(
+//            text = "Your Recipe Book is Empty",
+//            style = MaterialTheme.typography.headlineMedium,
+//            fontWeight = FontWeight.Bold,
+//            textAlign = TextAlign.Center
+//        )
+//
+//        Spacer(modifier = Modifier.height(12.dp))
+//
+//        Text(
+//            text = "Let's add your first recipe! You can create\none from scratch or import one from a URL.",
+//            style = MaterialTheme.typography.bodyLarge,
+//            color = MaterialTheme.colorScheme.onSurfaceVariant,
+//            textAlign = TextAlign.Center,
+//            lineHeight = 24.sp
+//        )
+//
+//        Spacer(modifier = Modifier.height(40.dp))
+//
+//        // Primary action
+//        Button(
+//            onClick = onAddRecipe,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(56.dp),
+//            shape = RoundedCornerShape(16.dp)
+//        ) {
+//            Icon(Icons.Default.Add, contentDescription = null)
+//            Spacer(Modifier.width(8.dp))
+//            Text(
+//                text = "Add Recipe",
+//                style = MaterialTheme.typography.titleMedium,
+//                fontWeight = FontWeight.SemiBold
+//            )
+//        }
+//
+//        Spacer(modifier = Modifier.height(12.dp))
+//
+//        // Secondary action
+//        TextButton(
+//            onClick = onImportRecipe,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(48.dp)
+//        ) {
+//            Icon(
+//                Icons.Default.Link,
+//                contentDescription = null,
+//                modifier = Modifier.size(20.dp)
+//            )
+//            Spacer(Modifier.width(8.dp))
+//            Text(
+//                text = "Import Recipe",
+//                style = MaterialTheme.typography.titleMedium
+//            )
+//        }
+//    }
+//}
 
 @Composable
 private fun EmptyState(
@@ -329,44 +444,96 @@ private fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.RestaurantMenu,
-            contentDescription = null,
-            modifier = Modifier.size(100.dp),
-            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-        )
-        Spacer(modifier = Modifier.height(Dimens.spacing_medium))
+        // Icon with gradient background
+        Box(
+            modifier = Modifier
+                .size(120.dp)
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    ),
+                    shape = CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.RestaurantMenu,
+                contentDescription = null,
+                modifier = Modifier.size(60.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = stringResource(id = R.string.empty_state_title),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(Dimens.spacing_small))
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
             text = stringResource(id = R.string.empty_state_description),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
-        Spacer(modifier = Modifier.height(Dimens.spacing_extra_large))
 
-        // This section was missing a closing brace in the original file, I've added it.
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Single primary action button
+        Button(
+            onClick = onAddRecipe,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.primary
+            )
         ) {
-            OutlinedButton(onClick = onImportRecipe) {
-                Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(id = R.string.empty_state_import_recipe))
-            }
-            Button(onClick = onAddRecipe) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(id = R.string.add_recipe))
-            }
+            Icon(
+                Icons.Default.Add,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(id = R.string.add_recipe),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Secondary action
+        TextButton (
+            onClick = onImportRecipe,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+//            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        ) {
+            Icon(
+                Icons.Default.Link,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(id = R.string.empty_state_import_recipe),
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }
@@ -421,31 +588,40 @@ private fun RecipeListView(
         ),
         verticalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
     ) {
-        items(recipes, key = { it.id }) { recipe ->
+        items(
+            items = recipes,
+            key = { it.id }
+        ) { recipe ->
             val dismissBoxState = rememberSwipeToDismissBoxState(
-                confirmValueChange = {
-                    if (it == SwipeToDismissBoxValue.EndToStart || it == SwipeToDismissBoxValue.StartToEnd) {
-                        onRecipeDelete(recipe)
-                        true
-                    } else false
-                }
+                confirmValueChange = { dismissValue ->
+                    when (dismissValue) {
+                        SwipeToDismissBoxValue.StartToEnd,
+                        SwipeToDismissBoxValue.EndToStart -> {
+                            onRecipeDelete(recipe)
+                            true
+                        }
+                        else -> false
+                    }
+                },
+                positionalThreshold = { distance -> distance * 0.25f }
             )
 
-
             SwipeToDismissBox(
-                modifier = Modifier.animateItemPlacement(),
+                modifier = Modifier
+                    .animateItemPlacement()
+                    .clip(RoundedCornerShape(Dimens.spacing_small)), // Clip to prevent overflow
                 state = dismissBoxState,
                 enableDismissFromStartToEnd = true,
                 enableDismissFromEndToStart = true,
                 backgroundContent = {
                     val color by animateColorAsState(
                         targetValue = when (dismissBoxState.targetValue) {
-                            SwipeToDismissBoxValue.StartToEnd, SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
+                            SwipeToDismissBoxValue.StartToEnd,
+                            SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.errorContainer
                             else -> MaterialTheme.colorScheme.surface
                         },
                         label = "dismiss_bg_color"
                     )
-
 
                     val alignment = when (dismissBoxState.dismissDirection) {
                         SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
@@ -453,8 +629,8 @@ private fun RecipeListView(
                         else -> Alignment.Center
                     }
 
-                    val scale by animateFloatAsState(
-                        targetValue = if (dismissBoxState.targetValue == SwipeToDismissBoxValue.Settled) 1f else 1f,
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (dismissBoxState.targetValue != SwipeToDismissBoxValue.Settled) 1f else 0.75f,
                         label = "dismiss_icon_scale"
                     )
 
@@ -469,15 +645,20 @@ private fun RecipeListView(
                             imageVector = Icons.Default.Delete,
                             contentDescription = stringResource(id = R.string.recipe_list_delete_icon),
                             tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.scale(scale)
+                            modifier = Modifier.scale(iconScale)
                         )
                     }
                 }
             ) {
-                EnhancedRecipeListItem(
-                    recipe = recipe,
-                    onClick = { onRecipeClick(recipe) }
-                )
+                // Wrap the card in a Box to prevent z-index issues
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    EnhancedRecipeListItem(
+                        recipe = recipe,
+                        onClick = { onRecipeClick(recipe) }
+                    )
+                }
             }
         }
     }
@@ -490,18 +671,17 @@ private fun RecipeTagChip(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(Dimens.spacing_small), // Use a small corner radius
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f), // A nice, subtle color
+        shape = RoundedCornerShape(Dimens.spacing_small),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
     ) {
         Text(
             text = tag,
-            style = MaterialTheme.typography.labelSmall, // Small, readable text
+            style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = Dimens.spacing_small, vertical = Dimens.spacing_extra_small)
         )
     }
 }
-
 
 @Composable
 private fun RecipeGridView(
@@ -527,24 +707,32 @@ private fun RecipeGridView(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class) // Add this Opt-in for FlowRow
+// Also update EnhancedRecipeListItem to ensure proper elevation
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EnhancedRecipeListItem(
-    recipe: Recipe,onClick: () -> Unit
+    recipe: Recipe,
+    onClick: () -> Unit
 ) {
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         elevation = CardDefaults.elevatedCardElevation(
-            defaultElevation = Dimens.elevation_small
+            defaultElevation = 2.dp, // Increased from Dimens.elevation_small
+            pressedElevation = 4.dp,
+            focusedElevation = 4.dp
         ),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        shape = RoundedCornerShape(Dimens.spacing_small) // Ensure consistent shape
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = Dimens.spacing_small, vertical = Dimens.spacing_medium),
+            modifier = Modifier.padding(
+                horizontal = Dimens.spacing_small,
+                vertical = Dimens.spacing_medium
+            ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_medium)
         ) {
@@ -565,7 +753,7 @@ fun EnhancedRecipeListItem(
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(vertical = Dimens.spacing_extra_small) // Add some vertical padding
+                    .padding(vertical = Dimens.spacing_extra_small)
             ) {
                 Text(
                     text = recipe.title,
@@ -586,20 +774,17 @@ fun EnhancedRecipeListItem(
                     )
                 }
 
-                // --- START: Added Recipe Tags ---
                 if (recipe.tags.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(Dimens.spacing_small)) // Add space above tags
+                    Spacer(modifier = Modifier.height(Dimens.spacing_small))
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(Dimens.spacing_small),
                         verticalArrangement = Arrangement.spacedBy(Dimens.spacing_small)
                     ) {
-                        // Show up to 4 tags to avoid cluttering the list item
                         recipe.tags.take(4).forEach { tag ->
                             RecipeTagChip(tag = tag)
                         }
                     }
                 }
-                // --- END: Added Recipe Tags ---
             }
 
             Icon(
@@ -610,7 +795,6 @@ fun EnhancedRecipeListItem(
         }
     }
 }
-
 
 @Composable
 fun RecipeGridItem(
@@ -643,7 +827,6 @@ fun RecipeGridItem(
                     error = painterResource(id = R.drawable.ic_restaurant)
                 )
 
-                // Gradient overlay for better text readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -733,24 +916,9 @@ private fun ImportUrlDialog(
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) {
+            TextButton(onClick = onDismiss) {
                 Text(stringResource(id = R.string.recipe_list_cancel_button))
             }
         }
     )
-}
-
-// ADD THIS NEW PREVIEW
-@Preview(name = "Recipe List Content", showBackground = true)
-@Composable
-private fun RecipeListContentPreview() {
-    // Create some fake recipe data for the preview
-    val sampleRecipes = listOf(
-        Recipe(id = "1", title = "Classic Pancakes", description = "Fluffy and delicious pancakes for breakfast.", imageUrl = ""),
-        Recipe(id = "2", title = "Spaghetti Carbonara", description = "A creamy and classic Italian pasta dish.", imageUrl = "")
-    )
-
-    // Use your app's theme
-    MaterialTheme {
-    }
 }

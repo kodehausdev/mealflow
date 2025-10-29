@@ -1,15 +1,10 @@
+// 4. Update AppNavHost.kt to use MainScaffold
+// File: navigation/AppNavHost.kt
+
 package com.fatokifury.meal_flow.navigation
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.runtime.Composable
-
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -17,6 +12,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.fatokifury.meal_flow.ui.screens.*
@@ -28,15 +24,11 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun AppNavHost(
     modifier: Modifier = Modifier,
-    // We get the viewmodels here
     appViewModel: AppViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-
-    // 1. LISTEN to the startDestination from the AppViewModel
     val startDestination by appViewModel.startDestination.collectAsState()
-
     val navController: NavHostController = rememberNavController()
 
     LaunchedEffect(Unit) {
@@ -49,7 +41,6 @@ fun AppNavHost(
                 is AuthResultEvent.Error -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_LONG).show()
                 }
-
                 is AuthResultEvent.Success -> {
                     Toast.makeText(context, event.message, Toast.LENGTH_SHORT).show()
                 }
@@ -57,71 +48,138 @@ fun AppNavHost(
         }
     }
 
-    // 2. CHECK if the destination is ready
+    // Determine if we should show bottom nav
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+    val showBottomNav = currentRoute in listOf(
+        Screen.MealList.route,
+        Screen.MealCalendar.route,
+        Screen.Profile.route
+    )
+
     if (startDestination != null) {
-        // 3. If it's ready, build the NavHost with the CORRECT startDestination
-        NavHost(
-            navController = navController,
-            startDestination = startDestination!!, // Use the value from the ViewModel
-            modifier = modifier
-        ) {
-            composable(Screen.Login.route) {
-                LoginScreen(authViewModel = authViewModel)
+        if (showBottomNav) {
+            // Screens WITH bottom navigation
+            MainScaffold(navController = navController) { paddingModifier ->
+                NavHost(
+                    navController = navController,
+                    startDestination = startDestination!!,
+                    modifier = paddingModifier
+                ) {
+                    composable(Screen.Login.route) {
+                        LoginScreen(authViewModel = authViewModel)
+                    }
+
+                    composable(Screen.SignUp.route) {
+                        SignUpScreen(authViewModel = authViewModel)
+                    }
+
+                    composable(Screen.MealList.route) {
+                        RecipeListScreen(onlogout = authViewModel::onLogoutClicked)
+                    }
+
+                    composable(Screen.MealCalendar.route) {
+                        MealCalendarScreen()
+                    }
+
+                    composable(Screen.Profile.route) {
+                        ProfileScreen(
+                            onLogout = authViewModel::onLogoutClicked,
+                            onImportRecipeClick = {
+                                // Use your existing NavigationService to go to the Import screen
+                                appViewModel.navigationService.navigate(Screen.ImportRecipe.route)
+                            }
+                        )
+                    }
+
+
+
+                    composable(
+                        route = Screen.AddRecipe.route,
+                        arguments = listOf(navArgument("recipeId") {
+                            type = NavType.StringType; nullable = true
+                        })
+                    ) {
+                        AddRecipeScreen()
+                    }
+
+                    composable(
+                        route = Screen.RecipeDetail.route,
+                        arguments = listOf(navArgument("recipeId") { type = NavType.StringType })
+                    ) {
+                        RecipeDetailScreen()
+                    }
+
+                    composable(
+                        route = Screen.ImportRecipe.route,
+                        arguments = listOf(navArgument("url") {
+                            type = NavType.StringType; nullable = true
+                        })
+                    ) {
+                        ImportRecipeScreen()
+                    }
+                }
             }
-
-//            composable(Screen.AddRecipeByUrl.route) {
-//                AddRecipeByUrlScreen(navController = navController)
-//            }
-
-
-            composable(Screen.SignUp.route) {
-                SignUpScreen(authViewModel = authViewModel)
-            }
-
-            composable(Screen.MealList.route) {
-                RecipeListScreen(onlogout = authViewModel::onLogoutClicked)
-            }
-            composable(Screen.MealCalendar.route) {
-                MealCalendarScreen()
-            }
-
-            composable(
-                route = Screen.AddRecipe.route,
-                arguments = listOf(navArgument("recipeId") {
-                    type = NavType.StringType; nullable = true
-                })
+        } else {
+            // Screens WITHOUT bottom nav (login, signup, detail screens, etc.)
+            NavHost(
+                navController = navController,
+                startDestination = startDestination!!,
+                modifier = modifier
             ) {
-                AddRecipeScreen()
-            }
+                composable(Screen.Login.route) {
+                    LoginScreen(authViewModel = authViewModel)
+                }
 
-            composable(
-                route = Screen.RecipeDetail.route,
-                arguments = listOf(navArgument("recipeId") { type = NavType.StringType })
-            ) {
-                RecipeDetailScreen()
-            }
-            // In AppNavHost.kt
-            composable(
-                route = Screen.ImportRecipe.route,
-                // The arguments list MUST stay so NavController can pass it to the ViewModel
-                arguments = listOf(navArgument("url") {
-                    type = NavType.StringType; nullable = true
-                })
-            ) {
-                // Just call the screen. Hilt automatically creates the ViewModel
-                // and gives it the arguments from the NavController.
-                ImportRecipeScreen()
-            }
+                composable(Screen.SignUp.route) {
+                    SignUpScreen(authViewModel = authViewModel)
+                }
+
+                composable(Screen.MealList.route) {
+                    RecipeListScreen(onlogout = authViewModel::onLogoutClicked)
+                }
+
+                composable(Screen.MealCalendar.route) {
+                    MealCalendarScreen()
+                }
+
+                composable(Screen.Profile.route) {
+                    ProfileScreen(
+                        onLogout = authViewModel::onLogoutClicked,
+                        onImportRecipeClick = {
+                            // Use your existing NavigationService to go to the Import screen
+                            appViewModel.navigationService.navigate(Screen.ImportRecipe.route)
+                        }
+                    )
+                }
 
 
-        }
-    } else {
-        // If the destination isn't ready yet, show a loading indicator
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
+
+                composable(
+                    route = Screen.AddRecipe.route,
+                    arguments = listOf(navArgument("recipeId") {
+                        type = NavType.StringType; nullable = true
+                    })
+                ) {
+                    AddRecipeScreen()
+                }
+
+                composable(
+                    route = Screen.RecipeDetail.route,
+                    arguments = listOf(navArgument("recipeId") { type = NavType.StringType })
+                ) {
+                    RecipeDetailScreen()
+                }
+
+                composable(
+                    route = Screen.ImportRecipe.route,
+                    arguments = listOf(navArgument("url") {
+                        type = NavType.StringType; nullable = true
+                    })
+                ) {
+                    ImportRecipeScreen()
+                }
+            }
         }
     }
 }

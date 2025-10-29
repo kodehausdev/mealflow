@@ -167,3 +167,29 @@ val AppDarkColorScheme = darkColorScheme(
     surfaceContainerHigh = surfaceContainerHighDark,
     surfaceContainerHighest = surfaceContainerHighestDark,
 )
+
+
+// Custom colors for key UI elements (work in both light and dark)
+object AppColors {
+    // FAB colors
+    val FabContainerLight = Color(0xFFD32F2F) // Vibrant red
+    val FabContainerDark = Color(0xFFEF5350)  // Lighter red for dark mode
+    val FabContentLight = Color.White
+    val FabContentDark = Color.White
+
+    // Bottom Nav
+    val BottomNavSelectedLight = Color(0xFF1976D2) // Blue
+    val BottomNavSelectedDark = Color(0xFF42A5F5)  // Lighter blue
+    val BottomNavIndicatorLight = Color(0xFFBBDEFB)
+    val BottomNavIndicatorDark = Color(0xFF1565C0)
+
+    // Import Button
+    val ImportButtonLight = Color(0xFFE91E63) // Pink
+    val ImportButtonDark = Color(0xFFF48FB1)  // Lighter pink
+    val ImportContentLight = Color.White
+    val ImportContentDark = Color(0xFF880E4F)  // Dark pink
+
+    // Search Bar
+    val SearchBarLight = Color(0xFFF5F5F5)
+    val SearchBarDark = Color(0xFF2C2C2C)
+}

@@ -87,6 +87,8 @@
     <string name="import_recipe_ready_to_import">Ready to import from:</string>
     <string name="import_recipe_no_url_provided">No URL provided</string>
     <string name="import_recipe_error_preparing_data">Error preparing recipe data for editing.</string>
+    <string name="import_recipe">import_recipe</string>
+
 
     <!-- MealCalendarScreen -->
     <string name="meal_calendar_title">Meal Calendar</string>

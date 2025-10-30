@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -58,7 +59,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun RecipeListScreen(
     viewModel: RecipeListViewModel = hiltViewModel(),
-//    onlogout: () -> Unit // Keep for now but not used (moved to Profile)
+    onlogout: () -> Unit // Keep for now but not used (moved to Profile)
 ) {
     val lazyGridState = rememberLazyGridState()
     val lazyListState = rememberLazyListState()
@@ -153,8 +154,12 @@ fun RecipeListScreen(
                     Surface(
                         onClick = viewModel::onImportRecipeClicked,
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
-                        tonalElevation = 2.dp,
+                        color = if (isSystemInDarkTheme())
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)
+                        else
+                            MaterialTheme.colorScheme.surfaceVariant,
+                        tonalElevation = 1.dp,
+                        shadowElevation = 0.dp,
                         modifier = Modifier.padding(end = 8.dp)
                     ) {
                         Row(
@@ -166,13 +171,12 @@ fun RecipeListScreen(
                                 imageVector = Icons.Rounded.Link,
                                 contentDescription = null,
                                 modifier = Modifier.size(20.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "Import",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -184,17 +188,19 @@ fun RecipeListScreen(
             if (uiState.recipes.isNotEmpty()) {
                 ExtendedFloatingActionButton(
                     onClick = viewModel::onAddRecipeClicked,
-                    shape = RoundedCornerShape(Dimens.fab_corner_radius),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.primary, // switched from primaryContainer
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                     expanded = isFabVisible,
                     icon = {
-                        Icon(
-                            Icons.Filled.Add,
-                            stringResource(id = R.string.add_recipe_fab_text)
+                        Icon(Icons.Filled.Add, stringResource(R.string.add_recipe_fab_text))
+                    },
+                    text = {
+                        Text(
+                            stringResource(R.string.add_recipe_fab_text),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
                         )
                     },
-                    text = { Text(stringResource(id = R.string.add_recipe_fab_text)) },
                     modifier = Modifier.scale(fabScale),
                     interactionSource = fabInteractionSource
                 )

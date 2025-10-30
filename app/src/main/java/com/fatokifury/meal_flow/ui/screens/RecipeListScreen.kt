@@ -58,7 +58,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun RecipeListScreen(
     viewModel: RecipeListViewModel = hiltViewModel(),
-    onlogout: () -> Unit // Keep for now but not used (moved to Profile)
+//    onlogout: () -> Unit // Keep for now but not used (moved to Profile)
 ) {
     val lazyGridState = rememberLazyGridState()
     val lazyListState = rememberLazyListState()
@@ -315,122 +315,6 @@ private fun RecipeListContent(
         }
     }
 }
-
-
-//@Composable
-//private fun EmptyState(
-//    onAddRecipe: () -> Unit,
-//    onImportRecipe: () -> Unit
-//) {
-//    Column(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .padding(32.dp),
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.Center
-//    ) {
-//        // Illustration-style icon
-//        Box(
-//            modifier = Modifier.size(200.dp),
-//            contentAlignment = Alignment.Center
-//        ) {
-//            // Background circle
-//            Box(
-//                modifier = Modifier
-//                    .size(180.dp)
-//                    .background(
-//                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-//                        shape = CircleShape
-//                    )
-//            )
-//            // Mid circle
-//            Box(
-//                modifier = Modifier
-//                    .size(140.dp)
-//                    .background(
-//                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-//                        shape = CircleShape
-//                    )
-//            )
-//            // Icon circle
-//            Box(
-//                modifier = Modifier
-//                    .size(100.dp)
-//                    .background(
-//                        color = MaterialTheme.colorScheme.primaryContainer,
-//                        shape = CircleShape
-//                    ),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                Icon(
-//                    imageVector = Icons.Default.RestaurantMenu,
-//                    contentDescription = null,
-//                    modifier = Modifier.size(50.dp),
-//                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-//                )
-//            }
-//        }
-//
-//        Spacer(modifier = Modifier.height(32.dp))
-//
-//        Text(
-//            text = "Your Recipe Book is Empty",
-//            style = MaterialTheme.typography.headlineMedium,
-//            fontWeight = FontWeight.Bold,
-//            textAlign = TextAlign.Center
-//        )
-//
-//        Spacer(modifier = Modifier.height(12.dp))
-//
-//        Text(
-//            text = "Let's add your first recipe! You can create\none from scratch or import one from a URL.",
-//            style = MaterialTheme.typography.bodyLarge,
-//            color = MaterialTheme.colorScheme.onSurfaceVariant,
-//            textAlign = TextAlign.Center,
-//            lineHeight = 24.sp
-//        )
-//
-//        Spacer(modifier = Modifier.height(40.dp))
-//
-//        // Primary action
-//        Button(
-//            onClick = onAddRecipe,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(56.dp),
-//            shape = RoundedCornerShape(16.dp)
-//        ) {
-//            Icon(Icons.Default.Add, contentDescription = null)
-//            Spacer(Modifier.width(8.dp))
-//            Text(
-//                text = "Add Recipe",
-//                style = MaterialTheme.typography.titleMedium,
-//                fontWeight = FontWeight.SemiBold
-//            )
-//        }
-//
-//        Spacer(modifier = Modifier.height(12.dp))
-//
-//        // Secondary action
-//        TextButton(
-//            onClick = onImportRecipe,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(48.dp)
-//        ) {
-//            Icon(
-//                Icons.Default.Link,
-//                contentDescription = null,
-//                modifier = Modifier.size(20.dp)
-//            )
-//            Spacer(Modifier.width(8.dp))
-//            Text(
-//                text = "Import Recipe",
-//                style = MaterialTheme.typography.titleMedium
-//            )
-//        }
-//    }
-//}
 
 @Composable
 private fun EmptyState(

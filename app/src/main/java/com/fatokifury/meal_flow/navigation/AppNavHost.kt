@@ -83,13 +83,7 @@ fun AppNavHost(
                     }
 
                     composable(Screen.Profile.route) {
-                        ProfileScreen(
-                            onLogout = authViewModel::onLogoutClicked,
-                            onImportRecipeClick = {
-                                // Use your existing NavigationService to go to the Import screen
-                                appViewModel.navigationService.navigate(Screen.ImportRecipe.route)
-                            }
-                        )
+                        ProfileScreen(onLogout = authViewModel::onLogoutClicked)
                     }
 
 
@@ -144,13 +138,7 @@ fun AppNavHost(
                 }
 
                 composable(Screen.Profile.route) {
-                    ProfileScreen(
-                        onLogout = authViewModel::onLogoutClicked,
-                        onImportRecipeClick = {
-                            // Use your existing NavigationService to go to the Import screen
-                            appViewModel.navigationService.navigate(Screen.ImportRecipe.route)
-                        }
-                    )
+                    ProfileScreen(onLogout = authViewModel::onLogoutClicked)
                 }
 
 

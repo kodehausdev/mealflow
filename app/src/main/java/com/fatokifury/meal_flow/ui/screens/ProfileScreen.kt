@@ -30,6 +30,8 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
     onLogout: () -> Unit
 ) {
+
+    val user by viewModel.user.collectAsState()
     val currentUser = FirebaseAuth.getInstance().currentUser
     val context = LocalContext.current
     val appVersion = remember {

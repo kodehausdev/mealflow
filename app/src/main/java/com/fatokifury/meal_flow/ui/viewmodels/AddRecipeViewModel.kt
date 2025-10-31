@@ -194,6 +194,22 @@ class AddRecipeViewModel @Inject constructor(
         }
     }
 
+
+    // --- PREVIEW of the change for AddRecipeViewModel.kt ---
+
+    // Add this function inside your AddRecipeViewModel class
+    fun setInitialStateForTest(recipe: Recipe) {
+        _uiState.update {
+            it.copy(
+                recipeId = recipe.id,
+                title = recipe.title,
+                servings = recipe.servings.toString(),
+                ingredients = recipe.ingredients,
+                originalRecipe = recipe // This is the crucial part
+            )
+        }
+    }
+
     fun removeTag(tag: String) {
         val updatedTags = _uiState.value.tags - tag
         _uiState.update { it.copy(tags = updatedTags) }

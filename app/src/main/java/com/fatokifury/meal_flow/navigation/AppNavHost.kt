@@ -94,7 +94,7 @@ fun AppNavHost(
                             type = NavType.StringType; nullable = true
                         })
                     ) {
-                        AddRecipeScreen()
+                        AddRecipeScreen(navController = navController)
                     }
 
                     composable(
@@ -149,7 +149,7 @@ fun AppNavHost(
                         type = NavType.StringType; nullable = true
                     })
                 ) {
-                    AddRecipeScreen()
+                    AddRecipeScreen(navController = navController)
                 }
 
                 composable(

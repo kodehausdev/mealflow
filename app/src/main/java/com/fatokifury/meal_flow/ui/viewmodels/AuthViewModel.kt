@@ -21,7 +21,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.auth.userProfileChangeRequest
 
 sealed class AuthResultEvent {
@@ -55,7 +54,8 @@ class AuthViewModel @Inject constructor(
 
     // --- Login Logic --- //
     fun onLoginEmailChange(email: String) {
-        _loginUiState.update { it.copy(email = email) }
+        val isError = email.isNotEmpty() && !validateEmail(email)
+        _loginUiState.update { it.copy(email = email, isEmailError = isError) }
     }
 
     fun onLoginPasswordChange(password: String) {

@@ -18,11 +18,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
+import org.json.JSONTokener
+import org.json.JSONArray
 
 private const val TAG = "ImportRecipeViewModel"
 
@@ -134,79 +135,74 @@ class ImportRecipeViewModel @Inject constructor(
         }
     }
 
+    private val ldJsonRegex = Regex(
+        """<script[^>]*type\s*=\s*["']?application/ld\+json["']?[^>]*>(.*?)</script>""",
+        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL)
+    )
+
     private fun parseJsonLd(htmlContent: String): Recipe {
-        val patterns = listOf(
-            "<script type=\"application/ld+json\">" to "</script>",
-            "<script type='application/ld+json'>" to "</script>",
-            "<script type=application/ld+json>" to "</script>",
-            """<script[^>]*type\s*=\s*["']?application/ld\+json["']?[^>]*>""".toRegex() to "</script>"
-        )
+        val scripts = ldJsonRegex.findAll(htmlContent).map { it.groupValues[1].trim() }.toList()
+        Log.d(TAG, "Found ${scripts.size} JSON-LD scripts")
 
-        var foundScripts = 0
+        for ((i, raw) in scripts.withIndex()) {
+            try {
+                // JSONTokener returns JSONObject OR JSONArray depending on the content
+                val root = JSONTokener(raw).nextValue()
+                val recipe = findRecipeObject(root) ?: continue
 
-        for ((startPattern, endPattern) in patterns) {
-            var startIndex = 0
+                val ingredients = recipe.optJSONArray("recipeIngredient")
+                    ?.let { parseIngredients(it) } ?: emptyList()
 
-            while (startIndex != -1) {
-                startIndex = when (startPattern) {
-                    is String -> htmlContent.indexOf(startPattern, startIndex)
-                    is Regex -> {
-                        val match = startPattern.find(htmlContent, startIndex)
-                        match?.range?.first ?: -1
-                    }
-
-                    else -> -1
+                val steps = when (val ins = recipe.opt("recipeInstructions")) {
+                    is JSONArray -> parseInstructionArray(ins)
+                    is String -> ins.split("\n").map { it.trim() }.filter { it.isNotEmpty() }
+                    else -> emptyList()
                 }
 
-                if (startIndex != -1) {
-                    foundScripts++
-                    val scriptStart = when (startPattern) {
-                        is String -> startIndex + startPattern.length
-                        is Regex -> {
-                            val match = startPattern.find(htmlContent, startIndex)
-                            (match?.range?.last ?: startIndex) + 1
-                        }
-
-                        else -> startIndex
-                    }
-
-                    val endIndex = htmlContent.indexOf(endPattern, scriptStart)
-                    if (endIndex != -1) {
-                        val jsonLdContent = htmlContent.substring(scriptStart, endIndex).trim()
-
-                        try {
-                            val jsonObject = JSONObject(jsonLdContent)
-                            val recipeObject = findRecipeObject(jsonObject)
-
-                            if (recipeObject != null) {
-                                val ingredients = recipeObject.optJSONArray("recipeIngredient")?.let { parseIngredients(it) } ?: emptyList()
-                                val instructions = recipeObject.optJSONArray("recipeInstructions")?.let { parseInstructionArray(it) } ?: emptyList()
-                                val imageUrl = parseImageUrl(recipeObject.opt("image"))
-                                val servings = recipeObject.optString("recipeYield", "1").toIntOrNull() ?: 1
-
-                                return Recipe(
-                                    title = recipeObject.optString("name", "").ifBlank { "Untitled Recipe" },
-                                    description = recipeObject.optString("description", ""),
-                                    imageUrl = imageUrl,
-                                    servings = servings,
-                                    ingredients = ingredients,
-                                    steps = instructions
-                                )
-                            }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "✗ Error parsing JSON-LD script #$foundScripts: ${e.message}")
-                        }
-                        startIndex = endIndex
-                    } else {
-                        startIndex = -1
-                    }
-                }
+                return Recipe(
+                    title = recipe.optString("name", "").ifBlank { "Untitled Recipe" },
+                    description = recipe.optString("description", ""),
+                    imageUrl = parseImageUrl(recipe.opt("image")),
+                    servings = parseServings(recipe.opt("recipeYield")),
+                    ingredients = ingredients,
+                    steps = steps
+                )
+            } catch (e: Exception) {
+                Log.w(TAG, "✗ Error parsing JSON-LD script #${i + 1}: ${e.message}")
             }
         }
-
         throw Exception("No valid 'Recipe' object found in any JSON-LD script tag.")
     }
 
+    private fun findRecipeObject(node: Any?): JSONObject? {
+        when (node) {
+            is JSONArray -> {
+                for (i in 0 until node.length()) findRecipeObject(node.opt(i))?.let { return it }
+            }
+            is JSONObject -> {
+                val type = node.opt("@type")
+                val isRecipe = when (type) {
+                    is String -> type.equals("Recipe", ignoreCase = true)
+                    is JSONArray -> (0 until type.length()).any { type.optString(it).equals("Recipe", true) }
+                    else -> false
+                }
+                if (isRecipe) return node
+                findRecipeObject(node.opt("@graph"))?.let { return it }
+                // Occasionally nested under mainEntity / mainEntityOfPage
+                findRecipeObject(node.opt("mainEntity"))?.let { return it }
+            }
+        }
+        return null
+    }
+
+    private fun parseServings(yield: Any?): Int {
+        val text = when (yield) {
+            is JSONArray -> (0 until yield.length()).joinToString(" ") { yield.optString(it) }
+            null -> ""
+            else -> yield.toString()
+        }
+        return Regex("\\d+").find(text)?.value?.toIntOrNull() ?: 1
+    }
     // In ImportRecipeViewModel.kt
     private fun parseIngredients(jsonArray: JSONArray): List<Ingredient> {
         return (0 until jsonArray.length()).mapNotNull { i ->

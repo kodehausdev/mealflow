@@ -1,6 +1,7 @@
 package com.fatokifury.meal_flow.ui.screens
 
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.fatokifury.meal_flow.R
 import com.fatokifury.meal_flow.model.Ingredient
 import com.fatokifury.meal_flow.ui.theme.Dimens
@@ -572,10 +574,20 @@ private fun ImagePicker(
     ) {
         if (imageToShow != null) {
             AsyncImage(
-                model = imageToShow,
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(imageToShow)
+                    .addHeader("User-Agent", "Mozilla/5.0 (Linux; Android 14; SM-A055F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                    .addHeader("Referer", "https://www.foodnetwork.com/")
+                    .addHeader("Accept", "image/avif,image/webp,image/apng,image/*,*/*;q=0.8")
+                    .addHeader("Sec-Fetch-Dest", "image")
+                    .addHeader("Sec-Fetch-Mode", "no-cors")
+                    .addHeader("Sec-Fetch-Site", "cross-site")
+                    .crossfade(true)
+                    .build(),
                 contentDescription = "Recipe image",
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                onError = { Log.e("ImagePicker", "Load failed for $imageToShow", it.result.throwable) }
             )
         } else {
             Column(

@@ -188,7 +188,7 @@ fun RecipeListScreen(
             if (uiState.recipes.isNotEmpty()) {
                 ExtendedFloatingActionButton(
                     onClick = viewModel::onAddRecipeClicked,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(12.dp),
                     containerColor = MaterialTheme.colorScheme.primary, // switched from primaryContainer
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                     expanded = isFabVisible,

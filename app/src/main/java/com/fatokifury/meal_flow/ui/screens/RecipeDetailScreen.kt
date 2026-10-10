@@ -51,6 +51,10 @@ import com.fatokifury.meal_flow.R
 import com.fatokifury.meal_flow.ui.theme.Dimens
 import com.fatokifury.meal_flow.ui.viewmodels.RecipeDetailViewModel
 import java.util.Locale
+import android.net.Uri
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -70,6 +74,8 @@ fun RecipeDetailScreen(
             }
     }
 
+
+
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
@@ -78,6 +84,8 @@ fun RecipeDetailScreen(
     }
 
     val recipe = uiState.recipe
+
+
 
     Scaffold(
         topBar = {
@@ -90,6 +98,8 @@ fun RecipeDetailScreen(
                 }
             )
         },
+
+
         floatingActionButton = {
             AnimatedVisibility(
                 visible = isFabVisible,
@@ -107,6 +117,7 @@ fun RecipeDetailScreen(
                 }
             }
         }
+
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -201,6 +212,23 @@ fun RecipeDetailScreen(
                         }
                     }
 
+                    if (recipe.sourceUrl.isNotBlank()) {
+                        item {
+                            val uriHandler = LocalUriHandler.current
+                            val host = remember(recipe.sourceUrl) {
+                                Uri.parse(recipe.sourceUrl).host?.removePrefix("www.") ?: recipe.sourceUrl
+                            }
+                            TextButton(
+                                onClick = { runCatching { uriHandler.openUri(recipe.sourceUrl) } },
+                                modifier = Modifier.padding(horizontal = Dimens.spacing_small)
+                            ) {
+                                Icon(Icons.Rounded.Link, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(Dimens.spacing_small))
+                                Text("View original on $host")
+                            }
+                        }
+                    }
+
                     if (recipe.steps.isNotEmpty()) {
                         item {
                             Spacer(modifier = Modifier.height(Dimens.spacing_medium))
@@ -229,6 +257,7 @@ fun RecipeDetailScreen(
                             }
                         }
                     }
+
 
                     if (recipe.tags.isNotEmpty()) {
                         item {

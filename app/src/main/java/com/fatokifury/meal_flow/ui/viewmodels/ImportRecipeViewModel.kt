@@ -233,8 +233,9 @@ class ImportRecipeViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 // Regex + JSON over ~300 KB of HTML: keep it off the main thread.
+                val pageUrl = _uiState.value.importUrl
                 val parsed = withContext(Dispatchers.Default) { parseJsonLd(htmlContent) }
-                val recipe = localizeImage(parsed, _uiState.value.importUrl)
+                val recipe = localizeImage(parsed, pageUrl).copy(sourceUrl = pageUrl.orEmpty())
                 val result = recipeRepository.saveRecipe(recipe)
 
                 result.onSuccess { newId ->

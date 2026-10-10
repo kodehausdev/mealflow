@@ -266,7 +266,8 @@ class AddRecipeViewModel @Inject constructor(
                     steps = currentState.steps,
                     tags = currentState.tags,
                     imageUrl = imageUrlToSave, // Save URI as string
-                    createdBy = auth.currentUser?.uid ?: ""
+                    createdBy = auth.currentUser?.uid ?: "",
+                    sourceUrl = currentState.originalRecipe?.sourceUrl ?: ""
                 )
 
                 val saveResult = recipeRepository.saveRecipe(recipeToSave)

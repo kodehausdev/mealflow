@@ -14,5 +14,6 @@ data class Recipe(
     val tags: List<String> = emptyList(),
     val createdBy: String? = null,
     @ServerTimestamp
-    val createdAt: Date? = null
+    val createdAt: Date? = null,
+    val sourceUrl: String = ""
 )
